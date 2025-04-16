@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+
+  etcd:
+    image: quay.io/coreos/etcd:latest
+    ports:
+      - "2379:2379"
+    environment:
+      - ETCD_LISTEN_CLIENT_URLS=http://0.0.0.0:2379
+      - ETCD_ADVERTISE_CLIENT_URLS=http://0.0.0.0:2379
+
+  memcached:
+    image: memcached:latest
+    ports:
+      - "11211:11211"
+
+  zookeeper:
+    image: zookeeper:3.8
+    ports:
+      - "2181:2181"
+
+  consul:
+    image: consul:latest
+    ports:
+      - "8500:8500"
+
+  nacos:
+    image: nacos/nacos-server:latest
+    ports:
+      - "8848:8848"
+    environment:
+      - MODE=standalone
+
+  go-captcha-service:
+    build: .
+    ports:
+      - "8080:8080"
+      - "50051:50051"
+    depends_on:
+      - redis
+      - etcd
+      - memcached
+      - zookeeper
+      - consul
+      - nacos
+    volumes:
+      - ./config.json:/app/config.json

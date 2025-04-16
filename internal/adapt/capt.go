@@ -1,0 +1,42 @@
+package adapt
+
+type CaptData struct {
+	CaptchaKey        string `json:"captcha_key,omitempty"`
+	MasterImageBase64 string `json:"master_image_base64,omitempty"`
+	ThumbImageBase64  string `json:"thumb_image_base64,omitempty"`
+	MasterImageWidth  int32  `json:"master_width,omitempty"`
+	MasterImageHeight int32  `json:"master_height,omitempty"`
+	ThumbImageWidth   int32  `json:"thumb_width,omitempty"`
+	ThumbImageHeight  int32  `json:"thumb_height,omitempty"`
+	ThumbImageSize    int32  `json:"thumb_size,omitempty"`
+	DisplayX          int32  `json:"display_x,omitempty"`
+	DisplayY          int32  `json:"display_y,omitempty"`
+}
+
+type CaptDataResponse struct {
+	Code              int32  `json:"code" default:"200"`
+	Message           string `json:"message"`
+	CaptchaKey        string `json:"captcha_key,omitempty"`
+	MasterImageBase64 string `json:"master_image_base64,omitempty"`
+	ThumbImageBase64  string `json:"thumb_image_base64,omitempty"`
+	MasterImageWidth  int32  `json:"master_width,omitempty"`
+	MasterImageHeight int32  `json:"master_height,omitempty"`
+	ThumbImageWidth   int32  `json:"thumb_width,omitempty"`
+	ThumbImageHeight  int32  `json:"thumb_height,omitempty"`
+	ThumbImageSize    int32  `json:"thumb_size,omitempty"`
+	DisplayX          int32  `json:"display_x,omitempty"`
+	DisplayY          int32  `json:"display_y,omitempty"`
+	Type              int32  `json:"type,omitempty"`
+}
+
+type CaptNormalDataResponse struct {
+	Code    int32       `json:"code" default:"200"`
+	Message string      `json:"message" default:""`
+	Data    interface{} `json:"data"`
+}
+
+type CaptStatusDataResponse struct {
+	Code    int32  `json:"code" default:"200"`
+	Message string `json:"message" default:""`
+	Data    string `json:"status" default:""`
+}

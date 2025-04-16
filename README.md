@@ -1,2 +1,2 @@
-# go-captcha-docker
-This is a docker image deployment for GoCaptcha
+# go-captcha-service
+

@@ -1,0 +1,19 @@
+{
+  "service_name": "go-captcha-service",
+  "http_port": "8080",
+  "grpc_port": "50051",
+  "redis_addrs": "localhost:6379",
+  "etcd_addrs": "localhost:2379",
+  "memcache_addrs": "localhost:11211",
+  "cache_type": "memory",
+  "cache_ttl": 60,
+  "cache_cleanup_interval": 10,
+  "cache_key_prefix": "GO_CAPTCHA_DATA:",
+  "service_discovery": "",
+  "service_discovery_addrs": "localhost:2379",
+  "rate_limit_qps": 1000,
+  "rate_limit_burst": 1000,
+  "load_balancer": "round-robin",
+  "api_keys": ["my-secret-key-123", "another-key-456"],
+  "enable_cors": true
+}

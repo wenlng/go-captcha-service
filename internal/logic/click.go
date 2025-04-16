@@ -1,0 +1,151 @@
+package logic
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"strconv"
+	"strings"
+
+	"github.com/wenlng/go-captcha-service/internal/adapt"
+	"github.com/wenlng/go-captcha-service/internal/cache"
+	"github.com/wenlng/go-captcha-service/internal/common"
+	"github.com/wenlng/go-captcha-service/internal/config"
+	"github.com/wenlng/go-captcha-service/internal/helper"
+	"github.com/wenlng/go-captcha-service/internal/pkg/gocaptcha"
+	"github.com/wenlng/go-captcha/v2/click"
+	"go.uber.org/zap"
+)
+
+// ClickCaptLogic .
+type ClickCaptLogic struct {
+	svcCtx *common.SvcContext
+
+	cache   cache.Cache
+	config  *config.Config
+	logger  *zap.Logger
+	captcha *gocaptcha.GoCaptcha
+}
+
+// NewClickCaptLogic .
+func NewClickCaptLogic(svcCtx *common.SvcContext) *ClickCaptLogic {
+	return &ClickCaptLogic{
+		svcCtx:  svcCtx,
+		cache:   svcCtx.Cache,
+		config:  svcCtx.Config,
+		logger:  svcCtx.Logger,
+		captcha: svcCtx.Captcha,
+	}
+}
+
+// GetData .
+func (cl *ClickCaptLogic) GetData(ctx context.Context, ctype, theme, lang int) (res *adapt.CaptData, err error) {
+	res = &adapt.CaptData{}
+
+	if ctype < 0 {
+		return nil, fmt.Errorf("missing parameter")
+	}
+
+	captData, err := cl.captcha.ClickCaptInstance.Generate()
+	if err != nil {
+		return nil, fmt.Errorf("generate captcha data failed: %v", err)
+	}
+
+	data := captData.GetData()
+	if data == nil {
+		return nil, fmt.Errorf("generate captcha data failed: %v", err)
+	}
+
+	res.MasterImageBase64, err = captData.GetMasterImage().ToBase64()
+	if err != nil {
+		return nil, fmt.Errorf("failed to convert base64 encoding: %v", err)
+	}
+
+	res.ThumbImageBase64, err = captData.GetThumbImage().ToBase64()
+	if err != nil {
+		return nil, fmt.Errorf("failed to convert base64 encoding: %v", err)
+	}
+
+	cacheData := &cache.CaptCacheData{
+		Data:   data,
+		Status: 0,
+	}
+	cacheDataByte, err := json.Marshal(cacheData)
+	if err != nil {
+		return nil, fmt.Errorf("failed to json marshal: %v", err)
+	}
+
+	key, err := helper.GenUniqueId()
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate uuid: %v", err)
+	}
+
+	err = cl.cache.SetCache(ctx, key, string(cacheDataByte))
+	if err != nil {
+		return res, fmt.Errorf("failed to write cache:: %v", err)
+	}
+
+	opts := cl.captcha.ClickCaptInstance.GetOptions()
+	res.MasterImageWidth = int32(opts.GetImageSize().Width)
+	res.MasterImageHeight = int32(opts.GetImageSize().Height)
+	res.ThumbImageWidth = int32(opts.GetThumbImageSize().Width)
+	res.ThumbImageHeight = int32(opts.GetThumbImageSize().Height)
+	res.CaptchaKey = key
+	return res, nil
+}
+
+// CheckData .
+func (cl *ClickCaptLogic) CheckData(ctx context.Context, key string, dots string) (bool, error) {
+	if key == "" {
+		return false, fmt.Errorf("invalid key")
+	}
+
+	cacheData, err := cl.cache.GetCache(ctx, key)
+	if err != nil {
+		return false, fmt.Errorf("failed to get cache: %v", err)
+	}
+
+	src := strings.Split(dots, ",")
+
+	var captData *cache.CaptCacheData
+	err = json.Unmarshal([]byte(cacheData), &captData)
+	if err != nil {
+		return false, fmt.Errorf("failed to json unmarshal: %v", err)
+	}
+
+	dct, ok := captData.Data.(map[int]*click.Dot)
+	if !ok {
+		return false, fmt.Errorf("cache data invalid: %v", err)
+	}
+
+	ret := false
+	if (len(dct) * 2) == len(src) {
+		for i := 0; i < len(dct); i++ {
+			dot := dct[i]
+			j := i * 2
+			k := i*2 + 1
+			sx, _ := strconv.ParseInt(src[j], 10, 64)
+			sy, _ := strconv.ParseInt(src[k], 10, 64)
+
+			ret = click.CheckPoint(sx, sy, int64(dot.X), int64(dot.Y), int64(dot.Width), int64(dot.Height), 0)
+			if !ret {
+				break
+			}
+		}
+	}
+
+	if ret {
+		captData.Status = 1
+		cacheDataByte, err := json.Marshal(captData)
+		if err != nil {
+			return ret, fmt.Errorf("failed to json marshal: %v", err)
+		}
+
+		err = cl.cache.SetCache(ctx, key, string(cacheDataByte))
+		if err != nil {
+			return ret, fmt.Errorf("failed to update cache:: %v", err)
+		}
+	}
+
+	return ret, nil
+}
