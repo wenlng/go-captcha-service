@@ -1,0 +1,541 @@
+{
+  "resources": {
+    "version": "0.0.1",
+    "char": {
+      "languages": {
+        "chinese": [],
+        "english": []
+      }
+    },
+    "font": {
+      "type": "load",
+      "file_dir": "./gocaptcha/fonts/",
+      "file_maps": {
+        "yrdzst_bold": "yrdzst-bold.ttf"
+      }
+    },
+    "shape_image": {
+      "type": "load",
+      "file_dir": "./gocaptcha/shape_images/",
+      "file_maps": {
+        "shape_01": "shape_01.png",
+        "shape_01.png":"c.png"
+      }
+    },
+    "master_image": {
+      "type": "load",
+      "file_dir": "./gocaptcha/master_images/",
+      "file_maps": {
+        "image_01": "image_01.jpg",
+        "image_02":"image_02.jpg"
+      }
+    },
+    "thumb_image": {
+      "type": "load",
+      "file_dir": "./gocaptcha/thumb_images/",
+      "file_maps": {
+
+      }
+    },
+    "tile_image": {
+      "type": "load",
+      "file_dir": "./gocaptcha/tile_images/",
+      "file_maps": {
+        "tile_01": "tile_01.png",
+        "tile_02": "tile_02.png"
+      },
+      "file_maps_02": {
+        "tile_mask_01": "tile_mask_01.png",
+        "tile_mask_02": "tile_mask_02.png"
+      },
+      "file_maps_03": {
+        "tile_shadow_01": "tile_shadow_01.png",
+        "tile_shadow_02": "tile_shadow_02.png"
+      }
+    }
+  },
+  "builder": {
+    "click_config_maps": {
+      "click_default_ch": {
+        "language": "chinese",
+        "master": {
+          "image_size": {
+            "width": 300,
+            "height": 200
+          },
+          "range_length": {
+            "min": 6,
+            "max": 7
+          },
+          "range_angles": [
+            {
+              "min": 20,
+              "max": 35
+            },
+            {
+              "min": 35,
+              "max": 45
+            },
+            {
+              "min": 290,
+              "max": 305
+            },
+            {
+              "min": 305,
+              "max": 325
+            },
+            {
+              "min": 325,
+              "max": 330
+            }
+          ],
+          "range_size": {
+            "min": 26,
+            "max": 32
+          },
+          "range_colors": [
+            "#fde98e",
+            "#60c1ff",
+            "#fcb08e",
+            "#fb88ff",
+            "#b4fed4",
+            "#cbfaa9",
+            "#78d6f8"
+          ],
+          "display_shadow": true,
+          "shadow_color": "#101010",
+          "shadow_point": {
+            "x": -1,
+            "y": -1
+          },
+          "image_alpha": 1,
+          "use_shape_original_color": true
+        },
+        "thumb": {
+          "image_size": {
+            "width": 150,
+            "height": 40
+          },
+          "range_verify_length": {
+            "min": 2,
+            "max": 4
+          },
+          "disabled_range_verify_length": false,
+          "range_text_size": {
+            "min": 22,
+            "max": 28
+          },
+          "range_text_colors": [
+            "#1f55c4",
+            "#780592",
+            "#2f6b00",
+            "#910000",
+            "#864401",
+            "#675901",
+            "#016e5c"
+          ],
+          "range_background_colors": [
+            "#1f55c4",
+            "#780592",
+            "#2f6b00",
+            "#910000",
+            "#864401",
+            "#675901",
+            "#016e5c"
+          ],
+          "is_non_deform_ability": false,
+          "background_distort": 4,
+          "background_distort_alpha": 1,
+          "background_circles_num": 24,
+          "background_slim_line_num": 2
+        }
+      },
+      "click_dark_ch": {
+        "language": "chinese",
+        "master": {
+          "image_size": {
+            "width": 300,
+            "height": 200
+          },
+          "range_length": {
+            "min": 6,
+            "max": 7
+          },
+          "range_angles": [
+            {
+              "min": 20,
+              "max": 35
+            },
+            {
+              "min": 35,
+              "max": 45
+            },
+            {
+              "min": 290,
+              "max": 305
+            },
+            {
+              "min": 305,
+              "max": 325
+            },
+            {
+              "min": 325,
+              "max": 330
+            }
+          ],
+          "range_size": {
+            "min": 26,
+            "max": 32
+          },
+          "range_colors": [
+            "#fde98e",
+            "#60c1ff",
+            "#fcb08e",
+            "#fb88ff",
+            "#b4fed4",
+            "#cbfaa9",
+            "#78d6f8"
+          ],
+          "display_shadow": true,
+          "shadow_color": "#101010",
+          "shadow_point": {
+            "x": -1,
+            "y": -1
+          },
+          "image_alpha": 1,
+          "use_shape_original_color": true
+        },
+        "thumb": {
+          "image_size": {
+            "width": 150,
+            "height": 40
+          },
+          "range_verify_length": {
+            "min": 2,
+            "max": 4
+          },
+          "disabled_range_verify_length": false,
+          "range_text_size": {
+            "min": 22,
+            "max": 28
+          },
+          "range_text_colors": [
+            "#1f55c4",
+            "#780592",
+            "#2f6b00",
+            "#910000",
+            "#864401",
+            "#675901",
+            "#016e5c"
+          ],
+          "range_background_colors": [
+            "#1f55c4",
+            "#780592",
+            "#2f6b00",
+            "#910000",
+            "#864401",
+            "#675901",
+            "#016e5c"
+          ],
+          "is_non_deform_ability": false,
+          "background_distort": 4,
+          "background_distort_alpha": 1,
+          "background_circles_num": 24,
+          "background_slim_line_num": 2
+        }
+      },
+      "click_default_en": {
+        "language": "english",
+        "master": {
+          "image_size": {
+            "width": 300,
+            "height": 200
+          },
+          "range_length": {
+            "min": 6,
+            "max": 7
+          },
+          "range_angles": [
+            {
+              "min": 20,
+              "max": 35
+            },
+            {
+              "min": 35,
+              "max": 45
+            },
+            {
+              "min": 290,
+              "max": 305
+            },
+            {
+              "min": 305,
+              "max": 325
+            },
+            {
+              "min": 325,
+              "max": 330
+            }
+          ],
+          "range_size": {
+            "min": 34,
+            "max": 48
+          },
+          "range_colors": [
+            "#fde98e",
+            "#60c1ff",
+            "#fcb08e",
+            "#fb88ff",
+            "#b4fed4",
+            "#cbfaa9",
+            "#78d6f8"
+          ],
+          "display_shadow": true,
+          "shadow_color": "#101010",
+          "shadow_point": {
+            "x": -1,
+            "y": -1
+          },
+          "image_alpha": 1,
+          "use_shape_original_color": true
+        },
+        "thumb": {
+          "image_size": {
+            "width": 150,
+            "height": 40
+          },
+          "range_verify_length": {
+            "min": 2,
+            "max": 4
+          },
+          "disabled_range_verify_length": false,
+          "range_text_size": {
+            "min": 34,
+            "max": 48
+          },
+          "range_text_colors": [
+            "#1f55c4",
+            "#780592",
+            "#2f6b00",
+            "#910000",
+            "#864401",
+            "#675901",
+            "#016e5c"
+          ],
+          "range_background_colors": [
+            "#1f55c4",
+            "#780592",
+            "#2f6b00",
+            "#910000",
+            "#864401",
+            "#675901",
+            "#016e5c"
+          ],
+          "is_non_deform_ability": false,
+          "background_distort": 4,
+          "background_distort_alpha": 1,
+          "background_circles_num": 24,
+          "background_slim_line_num": 2
+        }
+      },
+      "click_dark_en": {
+        "language": "english",
+        "master": {
+          "image_size": {
+            "width": 300,
+            "height": 200
+          },
+          "range_length": {
+            "min": 6,
+            "max": 7
+          },
+          "range_angles": [
+            {
+              "min": 20,
+              "max": 35
+            },
+            {
+              "min": 35,
+              "max": 45
+            },
+            {
+              "min": 290,
+              "max": 305
+            },
+            {
+              "min": 305,
+              "max": 325
+            },
+            {
+              "min": 325,
+              "max": 330
+            }
+          ],
+          "range_size": {
+            "min": 26,
+            "max": 32
+          },
+          "range_colors": [
+            "#fde98e",
+            "#60c1ff",
+            "#fcb08e",
+            "#fb88ff",
+            "#b4fed4",
+            "#cbfaa9",
+            "#78d6f8"
+          ],
+          "display_shadow": true,
+          "shadow_color": "#101010",
+          "shadow_point": {
+            "x": -1,
+            "y": -1
+          },
+          "image_alpha": 1,
+          "use_shape_original_color": true
+        },
+        "thumb": {
+          "image_size": {
+            "width": 150,
+            "height": 40
+          },
+          "range_verify_length": {
+            "min": 2,
+            "max": 4
+          },
+          "disabled_range_verify_length": false,
+          "range_text_size": {
+            "min": 22,
+            "max": 28
+          },
+          "range_text_colors": [
+            "#1f55c4",
+            "#780592",
+            "#2f6b00",
+            "#910000",
+            "#864401",
+            "#675901",
+            "#016e5c"
+          ],
+          "range_background_colors": [
+            "#1f55c4",
+            "#780592",
+            "#2f6b00",
+            "#910000",
+            "#864401",
+            "#675901",
+            "#016e5c"
+          ],
+          "is_non_deform_ability": false,
+          "background_distort": 4,
+          "background_distort_alpha": 1,
+          "background_circles_num": 24,
+          "background_slim_line_num": 2
+        }
+      }
+    },
+    "click_shape_config_maps": {
+      "click_shape_default":  {
+        "master": {
+          "image_size": {
+            "width": 300,
+            "height": 200
+          },
+          "range_length": {
+            "min": 6,
+            "max": 7
+          },
+          "range_angles": [
+            {
+              "min": 20,
+              "max": 35
+            },
+            {
+              "min": 35,
+              "max": 45
+            },
+            {
+              "min": 290,
+              "max": 305
+            },
+            {
+              "min": 305,
+              "max": 325
+            },
+            {
+              "min": 325,
+              "max": 330
+            }
+          ],
+          "range_size": {
+            "min": 26,
+            "max": 32
+          },
+          "range_colors": [
+            "#fde98e",
+            "#60c1ff",
+            "#fcb08e",
+            "#fb88ff",
+            "#b4fed4",
+            "#cbfaa9",
+            "#78d6f8"
+          ],
+          "display_shadow": true,
+          "shadow_color": "#101010",
+          "shadow_point": {
+            "x": -1,
+            "y": -1
+          },
+          "image_alpha": 1,
+          "use_shape_original_color": true
+        },
+        "thumb": {
+          "image_size": {
+            "width": 150,
+            "height": 40
+          },
+          "range_verify_length": {
+            "min": 2,
+            "max": 4
+          },
+          "disabled_range_verify_length": false,
+          "range_text_size": {
+            "min": 22,
+            "max": 28
+          },
+          "range_text_colors": [
+            "#1f55c4",
+            "#780592",
+            "#2f6b00",
+            "#910000",
+            "#864401",
+            "#675901",
+            "#016e5c"
+          ],
+          "range_background_colors": [
+            "#1f55c4",
+            "#780592",
+            "#2f6b00",
+            "#910000",
+            "#864401",
+            "#675901",
+            "#016e5c"
+          ],
+          "is_non_deform_ability": false,
+          "background_distort": 4,
+          "background_distort_alpha": 1,
+          "background_circles_num": 24,
+          "background_slim_line_num": 2
+        }
+      }
+    },
+    "slide_config_maps": {
+      "slide_default": {}
+    },
+    "drag_config_maps": {
+      "drag_default": {}
+    },
+    "rotate_config_maps": {
+      "rotate_default": {}
+    }
+  }
+}

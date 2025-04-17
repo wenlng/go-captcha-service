@@ -13,37 +13,14 @@ service GoCaptchaService {
   rpc DelStatusInfo(StatusInfoRequest) returns (StatusInfoResponse) {}
 }
 
-// Type
-enum GoCaptchaType {
-  GoCaptchaTypeClick = 0;
-  GoCaptchaTypeClickShape = 1;
-  GoCaptchaTypeSlide = 2;
-  GoCaptchaTypeDrag = 3;
-  GoCaptchaTypeRotate = 4;
-}
-
-// Theme
-enum GoCaptchaTheme {
-  GoCaptchaThemeDefault = 0;
-  GoCaptchaThemeDark = 1;
-}
-
-// Lang
-enum GoCaptchaLang {
-  GoCaptchaLangDefault = 0;
-  GoCaptchaLangEnglish = 1;
-}
-
 message GetDataRequest {
-  GoCaptchaType type = 1;
-  optional GoCaptchaTheme theme = 2;
-  optional GoCaptchaLang lang = 3;
+  string id = 1;
 }
 
 message GetDataResponse {
   int32 code = 1;
   string message = 2;
-  GoCaptchaType type = 3;
+  string id = 3;
   string captchaKey = 4;
   string masterImageBase64 = 5;
   string thumbImageBase64 = 6;
@@ -57,7 +34,7 @@ message GetDataResponse {
 }
 
 message CheckDataRequest {
-  GoCaptchaType type = 1;
+  string id = 1;
   string captchaKey = 2;
   string value = 3;
 }

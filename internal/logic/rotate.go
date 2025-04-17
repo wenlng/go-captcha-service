@@ -9,6 +9,7 @@ import (
 	"github.com/wenlng/go-captcha-service/internal/cache"
 	"github.com/wenlng/go-captcha-service/internal/common"
 	"github.com/wenlng/go-captcha-service/internal/config"
+	"github.com/wenlng/go-captcha-service/internal/consts"
 	"github.com/wenlng/go-captcha-service/internal/helper"
 	"github.com/wenlng/go-captcha-service/internal/pkg/gocaptcha"
 	"github.com/wenlng/go-captcha/v2/rotate"
@@ -19,32 +20,42 @@ import (
 type RotateCaptLogic struct {
 	svcCtx *common.SvcContext
 
-	cache   cache.Cache
-	config  *config.Config
-	logger  *zap.Logger
-	captcha *gocaptcha.GoCaptcha
+	cache      cache.Cache
+	dynamicCfg *config.DynamicConfig
+	logger     *zap.Logger
+	captcha    *gocaptcha.GoCaptcha
 }
 
 // NewRotateCaptLogic .
 func NewRotateCaptLogic(svcCtx *common.SvcContext) *RotateCaptLogic {
 	return &RotateCaptLogic{
-		svcCtx:  svcCtx,
-		cache:   svcCtx.Cache,
-		config:  svcCtx.Config,
-		logger:  svcCtx.Logger,
-		captcha: svcCtx.Captcha,
+		svcCtx:     svcCtx,
+		cache:      svcCtx.Cache,
+		dynamicCfg: svcCtx.DynamicConfig,
+		logger:     svcCtx.Logger,
+		captcha:    svcCtx.Captcha,
 	}
 }
 
 // GetData .
-func (cl *RotateCaptLogic) GetData(ctx context.Context, ctype, theme, lang int) (res *adapt.CaptData, err error) {
+func (cl *RotateCaptLogic) GetData(ctx context.Context, id string) (res *adapt.CaptData, err error) {
 	res = &adapt.CaptData{}
 
-	if ctype < 0 {
-		return nil, fmt.Errorf("missing parameter")
+	if id == "" {
+		return nil, fmt.Errorf("missing id parameter")
 	}
 
-	captData, err := cl.captcha.RotateCaptInstance.Generate()
+	var capt *gocaptcha.RotateCaptInstance
+	switch cl.svcCtx.Captcha.GetCaptTypeWithKey(id) {
+	case consts.GoCaptchaTypeRotate:
+		capt = cl.svcCtx.Captcha.GetRotateInstanceWithKey(id)
+		break
+	}
+	if capt == nil || capt.Instance == nil {
+		return nil, fmt.Errorf("missing captcha type")
+	}
+
+	captData, err := capt.Instance.Generate()
 	if err != nil {
 		return nil, fmt.Errorf("generate captcha data failed: %v", err)
 	}
@@ -83,9 +94,9 @@ func (cl *RotateCaptLogic) GetData(ctx context.Context, ctype, theme, lang int) 
 		return res, fmt.Errorf("failed to write cache:: %v", err)
 	}
 
-	opts := cl.captcha.ClickCaptInstance.GetOptions()
-	res.MasterImageWidth = int32(opts.GetImageSize().Width)
-	res.MasterImageHeight = int32(opts.GetImageSize().Height)
+	opts := capt.Instance.GetOptions()
+	res.MasterImageWidth = int32(opts.GetImageSize())
+	res.MasterImageHeight = int32(opts.GetImageSize())
 	res.ThumbImageWidth = int32(data.Width)
 	res.ThumbImageHeight = int32(data.Height)
 	res.ThumbImageSize = int32(data.Width)
@@ -102,6 +113,10 @@ func (cl *RotateCaptLogic) CheckData(ctx context.Context, key string, angle int)
 	cacheData, err := cl.cache.GetCache(ctx, key)
 	if err != nil {
 		return false, fmt.Errorf("failed to get cache: %v", err)
+	}
+
+	if cacheData == "" {
+		return false, nil
 	}
 
 	var captData *cache.CaptCacheData

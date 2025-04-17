@@ -9,6 +9,7 @@ import (
 	"github.com/wenlng/go-captcha-service/internal/adapt"
 	"github.com/wenlng/go-captcha-service/internal/common"
 	"github.com/wenlng/go-captcha-service/internal/config"
+	"github.com/wenlng/go-captcha-service/internal/consts"
 	"github.com/wenlng/go-captcha-service/internal/logic"
 	"github.com/wenlng/go-captcha-service/proto"
 	"go.uber.org/zap"
@@ -16,9 +17,10 @@ import (
 
 // GrpcServer implements the gRPC cache service
 type GrpcServer struct {
+	svcCtx *common.SvcContext
 	proto.UnimplementedGoCaptchaServiceServer
-	config *config.Config
-	logger *zap.Logger
+	dynamicCfg *config.DynamicConfig
+	logger     *zap.Logger
 
 	// Initialize logic
 	clickCaptLogic  *logic.ClickCaptLogic
@@ -30,7 +32,8 @@ type GrpcServer struct {
 // NewGoCaptchaServer creates a new gRPC cache server
 func NewGoCaptchaServer(svcCtx *common.SvcContext) *GrpcServer {
 	return &GrpcServer{
-		config:          svcCtx.Config,
+		svcCtx:          svcCtx,
+		dynamicCfg:      svcCtx.DynamicConfig,
 		logger:          svcCtx.Logger,
 		clickCaptLogic:  logic.NewClickCaptLogic(svcCtx),
 		slideCaptLogic:  logic.NewSlideCaptLogic(svcCtx),
@@ -46,25 +49,26 @@ func (s *GrpcServer) GetData(ctx context.Context, req *proto.GetDataRequest) (*p
 
 	var data = &adapt.CaptData{}
 
-	ctype := int(req.GetType())
-	theme := int(req.GetTheme())
-	lang := int(req.GetLang())
+	id := req.GetId()
+	if id == "" {
+		return &proto.GetDataResponse{Code: 0, Message: "missing id parameter"}, nil
+	}
 
-	switch req.GetType() {
-	case proto.GoCaptchaType_GoCaptchaTypeClick:
-		data, err = s.clickCaptLogic.GetData(ctx, ctype, theme, lang)
+	switch s.svcCtx.Captcha.GetCaptTypeWithKey(id) {
+	case consts.GoCaptchaTypeClick:
+		data, err = s.clickCaptLogic.GetData(ctx, id)
 		break
-	case proto.GoCaptchaType_GoCaptchaTypeClickShape:
-		data, err = s.clickCaptLogic.GetData(ctx, ctype, theme, lang)
+	case consts.GoCaptchaTypeClickShape:
+		data, err = s.clickCaptLogic.GetData(ctx, id)
 		break
-	case proto.GoCaptchaType_GoCaptchaTypeSlide:
-		data, err = s.slideCaptLogic.GetData(ctx, ctype, theme, lang)
+	case consts.GoCaptchaTypeSlide:
+		data, err = s.slideCaptLogic.GetData(ctx, id)
 		break
-	case proto.GoCaptchaType_GoCaptchaTypeDrag:
-		data, err = s.slideCaptLogic.GetData(ctx, ctype, theme, lang)
+	case consts.GoCaptchaTypeDrag:
+		data, err = s.slideCaptLogic.GetData(ctx, id)
 		break
-	case proto.GoCaptchaType_GoCaptchaTypeRotate:
-		data, err = s.rotateCaptLogic.GetData(ctx, ctype, theme, lang)
+	case consts.GoCaptchaTypeRotate:
+		data, err = s.rotateCaptLogic.GetData(ctx, id)
 		break
 	default:
 		//
@@ -72,10 +76,10 @@ func (s *GrpcServer) GetData(ctx context.Context, req *proto.GetDataRequest) (*p
 
 	if err != nil || data == nil {
 		s.logger.Error("failed to get captcha data, err: ", zap.Error(err))
-		return &proto.GetDataResponse{Code: 0, Message: "failed to get captcha data"}, nil
+		return &proto.GetDataResponse{Code: 0, Message: "captcha type not found"}, nil
 	}
 
-	resp.Type = req.GetType()
+	resp.Id = req.GetId()
 	return resp, nil
 }
 
@@ -87,22 +91,27 @@ func (s *GrpcServer) CheckData(ctx context.Context, req *proto.CheckDataRequest)
 		return &proto.CheckDataResponse{Code: 1, Message: "captchaKey and value are required"}, nil
 	}
 
+	id := req.GetId()
+	if id == "" {
+		return &proto.CheckDataResponse{Code: 0, Message: "missing id parameter"}, nil
+	}
+
 	var err error
 	var ok bool
-	switch req.GetType() {
-	case proto.GoCaptchaType_GoCaptchaTypeClick:
+	switch s.svcCtx.Captcha.GetCaptTypeWithKey(id) {
+	case consts.GoCaptchaTypeClick:
 		ok, err = s.clickCaptLogic.CheckData(ctx, req.GetCaptchaKey(), req.GetValue())
 		break
-	case proto.GoCaptchaType_GoCaptchaTypeClickShape:
+	case consts.GoCaptchaTypeClickShape:
 		ok, err = s.clickCaptLogic.CheckData(ctx, req.GetCaptchaKey(), req.GetValue())
 		break
-	case proto.GoCaptchaType_GoCaptchaTypeSlide:
+	case consts.GoCaptchaTypeSlide:
 		ok, err = s.slideCaptLogic.CheckData(ctx, req.GetCaptchaKey(), req.GetValue())
 		break
-	case proto.GoCaptchaType_GoCaptchaTypeDrag:
+	case consts.GoCaptchaTypeDrag:
 		ok, err = s.slideCaptLogic.CheckData(ctx, req.GetCaptchaKey(), req.GetValue())
 		break
-	case proto.GoCaptchaType_GoCaptchaTypeRotate:
+	case consts.GoCaptchaTypeRotate:
 		var angle int64
 		angle, err = strconv.ParseInt(req.GetValue(), 10, 64)
 		if err == nil {

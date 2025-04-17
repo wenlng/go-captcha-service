@@ -8,10 +8,10 @@ import (
 )
 
 type SvcContext struct {
-	Cache   cache.Cache
-	Config  *config.Config
-	Logger  *zap.Logger
-	Captcha *gocaptcha.GoCaptcha
+	Cache         cache.Cache
+	DynamicConfig *config.DynamicConfig
+	Logger        *zap.Logger
+	Captcha       *gocaptcha.GoCaptcha
 }
 
 func NewSvcContext() *SvcContext {

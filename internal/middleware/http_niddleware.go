@@ -59,6 +59,12 @@ func APIKeyMiddleware(dc *config.DynamicConfig, logger *zap.Logger) HTTPMiddlewa
 	return func(next HandlerFunc) HandlerFunc {
 		return func(w http.ResponseWriter, r *http.Request) {
 			cfg := dc.Get()
+
+			if len(cfg.APIKeys) == 0 {
+				next(w, r)
+				return
+			}
+
 			apiKeyMap := make(map[string]struct{})
 			for _, key := range cfg.APIKeys {
 				apiKeyMap[key] = struct{}{}
@@ -136,9 +142,40 @@ func CircuitBreakerMiddleware(breaker *gobreaker.CircuitBreaker, logger *zap.Log
 func CORSMiddleware(logger *zap.Logger) HTTPMiddleware {
 	return func(next HandlerFunc) HandlerFunc {
 		return func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Access-Control-Allow-Origin", "*")
+			origin := r.Header.Get("Origin")
+
+			allowedOrigins := []string{"*"}
+			allowOrigin := "*"
+			for _, allowed := range allowedOrigins {
+				if allowed == "*" || allowed == origin {
+					allowOrigin = origin
+					break
+				}
+			}
+
+			w.Header().Set("Access-Control-Allow-Origin", allowOrigin)
 			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-			w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+			if requestedHeaders := r.Header.Get("Access-Control-Request-Headers"); requestedHeaders != "" {
+				w.Header().Set("Access-Control-Allow-Headers", requestedHeaders)
+			} else {
+				w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Custom-Header")
+			}
+
+			w.Header().Set("Access-Control-Max-Age", "86400")          // Cache preflight response for 24 hours
+			w.Header().Set("Access-Control-Allow-Credentials", "true") // Allow credentials if needed
+
+			// Handle preflight (OPTIONS) requests
+			if r.Method == http.MethodOptions {
+				w.WriteHeader(http.StatusNoContent)
+				return
+			}
+
+			// Processing precheck requests
+			if r.Method == "OPTIONS" {
+				w.WriteHeader(http.StatusOK)
+				return
+			}
 			next(w, r)
 		}
 	}

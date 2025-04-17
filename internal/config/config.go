@@ -30,15 +30,19 @@ type Config struct {
 	RateLimitQPS          int      `json:"rate_limit_qps"`
 	RateLimitBurst        int      `json:"rate_limit_burst"`
 	LoadBalancer          string   `json:"load_balancer"` // round-robin, consistent-hash
-	APIKeys               []string `json:"api_keys"`      // API keys for authentication
-	EnableCors            bool     `json:"enable_cors"`   // cross-domain resources
+	EnableCors            bool     `json:"enable_cors"`
+	APIKeys               []string `json:"api_keys"`
+	LogLevel              string   `json:"log_level"` // error, debug, info, none
 }
 
 // DynamicConfig .
 type DynamicConfig struct {
-	Config Config
-	mu     sync.RWMutex
+	Config      Config
+	mu          sync.RWMutex
+	hotCbsHooks map[string]HandleHotCallbackHookFnc
 }
+
+type HandleHotCallbackHookFnc = func(*DynamicConfig)
 
 // NewDynamicConfig .
 func NewDynamicConfig(file string) (*DynamicConfig, error) {
@@ -46,7 +50,7 @@ func NewDynamicConfig(file string) (*DynamicConfig, error) {
 	if err != nil {
 		return nil, err
 	}
-	dc := &DynamicConfig{Config: cfg}
+	dc := &DynamicConfig{Config: cfg, hotCbsHooks: make(map[string]HandleHotCallbackHookFnc)}
 	go dc.watchFile(file)
 	return dc, nil
 }
@@ -67,6 +71,29 @@ func (dc *DynamicConfig) Update(cfg Config) error {
 	defer dc.mu.Unlock()
 	dc.Config = cfg
 	return nil
+}
+
+// RegisterHotCallbackHook callback when updating configuration
+func (dc *DynamicConfig) RegisterHotCallbackHook(key string, callback HandleHotCallbackHookFnc) {
+	if _, ok := dc.hotCbsHooks[key]; !ok {
+		dc.hotCbsHooks[key] = callback
+	}
+}
+
+// UnRegisterHotCallbackHook callback when updating configuration
+func (dc *DynamicConfig) UnRegisterHotCallbackHook(key string) {
+	if _, ok := dc.hotCbsHooks[key]; !ok {
+		delete(dc.hotCbsHooks, key)
+	}
+}
+
+// HandleHotCallbackHook .
+func (dc *DynamicConfig) HandleHotCallbackHook() {
+	for _, fnc := range dc.hotCbsHooks {
+		if fnc != nil {
+			fnc(dc)
+		}
+	}
 }
 
 // watchFile monitors the Config file for changes
@@ -106,6 +133,8 @@ func (dc *DynamicConfig) watchFile(file string) {
 					fmt.Fprintf(os.Stderr, "Failed to update Config: %v\n", err)
 					continue
 				}
+
+				dc.HandleHotCallbackHook()
 				fmt.Printf("Configuration reloaded successfully\n")
 			}
 		case err, ok := <-watcher.Errors:
@@ -276,8 +305,8 @@ func MergeWithFlags(config Config, flags map[string]interface{}) Config {
 	if v, ok := flags["api-keys"].(string); ok && v != "" {
 		config.APIKeys = strings.Split(v, ",")
 	}
-	if v, ok := flags["enable-cors"].(bool); ok {
-		config.EnableCors = v
+	if v, ok := flags["log-level"].(string); ok && v != "" {
+		config.LogLevel = v
 	}
 	return config
 }
@@ -299,7 +328,8 @@ func DefaultConfig() Config {
 		RateLimitQPS:          1000,
 		RateLimitBurst:        1000,
 		LoadBalancer:          "round-robin",
-		APIKeys:               []string{"my-secret-key-123"},
 		EnableCors:            false,
+		APIKeys:               []string{"my-secret-key-123"},
+		LogLevel:              "info",
 	}
 }

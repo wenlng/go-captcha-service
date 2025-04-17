@@ -25,3 +25,27 @@ go.work.sum
 
 # env file
 .env
+
+# Other
+.cache/
+unpackage
+.idea/
+.DS_Store
+.vscode
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.node
+!.vscode/extensions.json
+
+logs
+*.log
+
+# resources
+resources/gocaptcha/fonts/*
+resources/gocaptcha/master_images/*
+resources/gocaptcha/shape_images/*
+resources/gocaptcha/thumb_images/*
+resources/gocaptcha/tile_images/*

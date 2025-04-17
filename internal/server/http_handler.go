@@ -8,33 +8,39 @@ import (
 	"github.com/wenlng/go-captcha-service/internal/adapt"
 	"github.com/wenlng/go-captcha-service/internal/common"
 	"github.com/wenlng/go-captcha-service/internal/config"
+	"github.com/wenlng/go-captcha-service/internal/consts"
 	"github.com/wenlng/go-captcha-service/internal/helper"
 	"github.com/wenlng/go-captcha-service/internal/logic"
 	"github.com/wenlng/go-captcha-service/internal/middleware"
+	config2 "github.com/wenlng/go-captcha-service/internal/pkg/gocaptcha/config"
 	"go.uber.org/zap"
 )
 
 // HTTPHandlers manages HTTP request handlers
 type HTTPHandlers struct {
-	config *config.Config
-	logger *zap.Logger
+	svcCtx     *common.SvcContext
+	dynamicCfg *config.DynamicConfig
+	logger     *zap.Logger
 
 	// Initialize logic
 	clickCaptLogic  *logic.ClickCaptLogic
 	slideCaptLogic  *logic.SlideCaptLogic
 	rotateCaptLogic *logic.RotateCaptLogic
 	commonLogic     *logic.CommonLogic
+	resourceLogic   *logic.ResourceLogic
 }
 
 // NewHTTPHandlers creates a new HTTP handlers instance
 func NewHTTPHandlers(svcCtx *common.SvcContext) *HTTPHandlers {
 	return &HTTPHandlers{
-		config:          svcCtx.Config,
+		svcCtx:          svcCtx,
+		dynamicCfg:      svcCtx.DynamicConfig,
 		logger:          svcCtx.Logger,
 		clickCaptLogic:  logic.NewClickCaptLogic(svcCtx),
 		slideCaptLogic:  logic.NewSlideCaptLogic(svcCtx),
 		rotateCaptLogic: logic.NewRotateCaptLogic(svcCtx),
 		commonLogic:     logic.NewCommonLogic(svcCtx),
+		resourceLogic:   logic.NewResourceLogic(svcCtx),
 	}
 }
 
@@ -50,49 +56,29 @@ func (h *HTTPHandlers) GetDataHandler(w http.ResponseWriter, r *http.Request) {
 
 	query := r.URL.Query()
 
-	typeStr := query.Get("type")
-	ctype, err := strconv.Atoi(typeStr)
-	if err != nil {
-		middleware.WriteError(w, http.StatusBadRequest, "missing type parameter")
+	id := query.Get("id")
+	if id == "" {
+		middleware.WriteError(w, http.StatusBadRequest, "missing id parameter")
 		return
 	}
 
-	themeStr := query.Get("theme")
-	var theme int
-	if themeStr != "" {
-		theme, err = strconv.Atoi(themeStr)
-		if err != nil {
-			middleware.WriteError(w, http.StatusBadRequest, "missing theme parameter")
-			return
-		}
-	}
-
-	langStr := query.Get("lang")
-	var lang int
-	if langStr != "" {
-		lang, err = strconv.Atoi(langStr)
-		if err != nil {
-			middleware.WriteError(w, http.StatusBadRequest, "missing lang parameter")
-			return
-		}
-	}
-
 	var data *adapt.CaptData
-	switch ctype {
-	case common.GoCaptchaTypeClick:
-		data, err = h.clickCaptLogic.GetData(r.Context(), ctype, theme, lang)
+	var err error
+	switch h.svcCtx.Captcha.GetCaptTypeWithKey(id) {
+	case consts.GoCaptchaTypeClick:
+		data, err = h.clickCaptLogic.GetData(r.Context(), id)
 		break
-	case common.GoCaptchaTypeClickShape:
-		data, err = h.clickCaptLogic.GetData(r.Context(), ctype, theme, lang)
+	case consts.GoCaptchaTypeClickShape:
+		data, err = h.clickCaptLogic.GetData(r.Context(), id)
 		break
-	case common.GoCaptchaTypeSlide:
-		data, err = h.slideCaptLogic.GetData(r.Context(), ctype, theme, lang)
+	case consts.GoCaptchaTypeSlide:
+		data, err = h.slideCaptLogic.GetData(r.Context(), id)
 		break
-	case common.GoCaptchaTypeDrag:
-		data, err = h.slideCaptLogic.GetData(r.Context(), ctype, theme, lang)
+	case consts.GoCaptchaTypeDrag:
+		data, err = h.slideCaptLogic.GetData(r.Context(), id)
 		break
-	case common.GoCaptchaTypeRotate:
-		data, err = h.rotateCaptLogic.GetData(r.Context(), ctype, theme, lang)
+	case consts.GoCaptchaTypeRotate:
+		data, err = h.rotateCaptLogic.GetData(r.Context(), id)
 		break
 	default:
 		//...
@@ -100,13 +86,13 @@ func (h *HTTPHandlers) GetDataHandler(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil || data == nil {
 		h.logger.Error("failed to get captcha data, err: ", zap.Error(err))
-		middleware.WriteError(w, http.StatusNotFound, "v")
+		middleware.WriteError(w, http.StatusNotFound, "captcha type not found")
 		return
 	}
 
 	resp.Code = http.StatusOK
 	resp.Message = "success"
-	resp.Type = int32(ctype)
+	resp.Id = id
 
 	resp.CaptchaKey = data.CaptchaKey
 	resp.MasterImageBase64 = data.MasterImageBase64
@@ -133,7 +119,7 @@ func (h *HTTPHandlers) CheckDataHandler(w http.ResponseWriter, r *http.Request) 
 	}
 
 	var req struct {
-		Type       int32  `json:"type"`
+		Id         string `json:"id"`
 		CaptchaKey string `json:"captchaKey"`
 		Value      string `json:"value"`
 	}
@@ -146,22 +132,28 @@ func (h *HTTPHandlers) CheckDataHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	var err error
+	if req.Id == "" {
+		middleware.WriteError(w, http.StatusBadRequest, "missing id parameter")
+		return
+	}
+
 	var ok bool
-	switch req.Type {
-	case common.GoCaptchaTypeClick:
+	var err error
+
+	switch h.svcCtx.Captcha.GetCaptTypeWithKey(req.Id) {
+	case consts.GoCaptchaTypeClick:
 		ok, err = h.clickCaptLogic.CheckData(r.Context(), req.CaptchaKey, req.Value)
 		break
-	case common.GoCaptchaTypeClickShape:
+	case consts.GoCaptchaTypeClickShape:
 		ok, err = h.clickCaptLogic.CheckData(r.Context(), req.CaptchaKey, req.Value)
 		break
-	case common.GoCaptchaTypeSlide:
+	case consts.GoCaptchaTypeSlide:
 		ok, err = h.slideCaptLogic.CheckData(r.Context(), req.CaptchaKey, req.Value)
 		break
-	case common.GoCaptchaTypeDrag:
+	case consts.GoCaptchaTypeDrag:
 		ok, err = h.slideCaptLogic.CheckData(r.Context(), req.CaptchaKey, req.Value)
 		break
-	case common.GoCaptchaTypeRotate:
+	case consts.GoCaptchaTypeRotate:
 		var angle int64
 		angle, err = strconv.ParseInt(req.Value, 10, 64)
 		if err == nil {
@@ -246,7 +238,10 @@ func (h *HTTPHandlers) GetStatusInfoHandler(w http.ResponseWriter, r *http.Reque
 
 	resp.Code = http.StatusOK
 	if data != nil {
-		resp.Data = data
+		resp.Data = &adapt.CaptStatusInfo{
+			Info:   data.Data,
+			Status: data.Status,
+		}
 	}
 
 	json.NewEncoder(w).Encode(helper.Marshal(resp))
@@ -277,7 +272,168 @@ func (h *HTTPHandlers) DelStatusInfoHandler(w http.ResponseWriter, r *http.Reque
 
 	if ret {
 		resp.Data = "ok"
+	} else {
+		resp.Data = "no-ops"
 	}
+
+	json.NewEncoder(w).Encode(helper.Marshal(resp))
+}
+
+// UploadResourceHandler .
+func (h *HTTPHandlers) UploadResourceHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	resp := &adapt.CaptNormalDataResponse{Code: http.StatusOK, Message: "success"}
+
+	if r.Method != http.MethodPost {
+		middleware.WriteError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+
+	dirname := r.FormValue("dirname")
+	if dirname == "" {
+		middleware.WriteError(w, http.StatusBadRequest, "dirname is required")
+		return
+	}
+
+	if !helper.IsValidDirName(dirname) {
+		middleware.WriteError(w, http.StatusBadRequest, "invalid directory name")
+		return
+	}
+
+	maxUploadSize := int64(10 << 20) // 10MB
+	r.Body = http.MaxBytesReader(w, r.Body, maxUploadSize)
+
+	// Parse multipart/form-data
+	if err := r.ParseMultipartForm(maxUploadSize); err != nil {
+		h.logger.Error("Failed to parse form: %v ", zap.Error(err))
+		middleware.WriteError(w, http.StatusBadRequest, "parse form fail")
+		return
+	}
+
+	files := r.MultipartForm.File["files"]
+	if len(files) == 0 {
+		middleware.WriteError(w, http.StatusBadRequest, "no files uploaded")
+		return
+	}
+
+	ret, allDone, err := h.resourceLogic.SaveResource(r.Context(), dirname, files)
+	if !ret && err != nil {
+		h.logger.Error("Failed to save resource, err: ", zap.Error(err))
+		middleware.WriteError(w, http.StatusBadRequest, "save resource fail")
+		return
+	}
+
+	if ret {
+		resp.Data = "ok"
+	}
+
+	if !allDone {
+		resp.Message = "some files failed to be uploaded. check if they already exist"
+	}
+
+	json.NewEncoder(w).Encode(helper.Marshal(resp))
+}
+
+// GetResourceListHandler .
+func (h *HTTPHandlers) GetResourceListHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	resp := &adapt.CaptNormalDataResponse{Code: http.StatusOK, Message: "success"}
+	if r.Method != http.MethodGet {
+		middleware.WriteError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+
+	query := r.URL.Query()
+	resourcePath := query.Get("path")
+	if resourcePath == "" {
+		middleware.WriteError(w, http.StatusBadRequest, "path is required")
+		return
+	}
+
+	fileList, err := h.resourceLogic.GetResourceList(r.Context(), resourcePath)
+	if err != nil {
+		h.logger.Error("failed to get resource, err: ", zap.Error(err))
+		middleware.WriteError(w, http.StatusBadRequest, "get resource fail")
+		return
+	}
+
+	if fileList != nil {
+		resp.Data = fileList
+	}
+
+	json.NewEncoder(w).Encode(helper.Marshal(resp))
+}
+
+// DeleteResourceHandler .
+func (h *HTTPHandlers) DeleteResourceHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	resp := &adapt.CaptNormalDataResponse{Code: http.StatusOK, Message: "success"}
+	if r.Method != http.MethodDelete {
+		middleware.WriteError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+
+	query := r.URL.Query()
+	resourcePath := query.Get("path")
+	if resourcePath == "" {
+		middleware.WriteError(w, http.StatusBadRequest, "path is required")
+		return
+	}
+
+	ret, err := h.resourceLogic.DelResource(r.Context(), resourcePath)
+	if err != nil {
+		h.logger.Error("failed to delete resource, err: ", zap.Error(err))
+		middleware.WriteError(w, http.StatusBadRequest, "delete resource fail")
+		return
+	}
+
+	if ret {
+		resp.Data = "ok"
+	} else {
+		resp.Data = "no-ops"
+	}
+
+	json.NewEncoder(w).Encode(helper.Marshal(resp))
+}
+
+// GetGoCaptchaConfigHandler .
+func (h *HTTPHandlers) GetGoCaptchaConfigHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	resp := &adapt.CaptNormalDataResponse{Code: http.StatusOK, Message: "success"}
+	if r.Method != http.MethodGet {
+		middleware.WriteError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+
+	resp.Data = h.svcCtx.Captcha.DynamicCnf.Get()
+	json.NewEncoder(w).Encode(helper.Marshal(resp))
+}
+
+// UpdateHotGoCaptchaConfigHandler .
+func (h *HTTPHandlers) UpdateHotGoCaptchaConfigHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	resp := &adapt.CaptNormalDataResponse{Code: http.StatusOK, Message: ""}
+
+	if r.Method != http.MethodPost {
+		middleware.WriteError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+
+	var conf config2.CaptchaConfig
+	if err := json.NewDecoder(r.Body).Decode(&conf); err != nil {
+		middleware.WriteError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	err := h.svcCtx.Captcha.DynamicCnf.HotUpdate(conf)
+	if err != nil {
+		h.logger.Error("failed to hot update config, err: ", zap.Error(err))
+		middleware.WriteError(w, http.StatusBadRequest, "hot update config fail")
+		return
+	}
+
+	resp.Data = "ok"
+	resp.Code = http.StatusOK
 
 	json.NewEncoder(w).Encode(helper.Marshal(resp))
 }

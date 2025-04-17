@@ -11,6 +11,7 @@ import (
 	"github.com/wenlng/go-captcha-service/internal/cache"
 	"github.com/wenlng/go-captcha-service/internal/common"
 	"github.com/wenlng/go-captcha-service/internal/config"
+	"github.com/wenlng/go-captcha-service/internal/consts"
 	"github.com/wenlng/go-captcha-service/internal/helper"
 	"github.com/wenlng/go-captcha-service/internal/pkg/gocaptcha"
 	"github.com/wenlng/go-captcha/v2/click"
@@ -21,32 +22,45 @@ import (
 type ClickCaptLogic struct {
 	svcCtx *common.SvcContext
 
-	cache   cache.Cache
-	config  *config.Config
-	logger  *zap.Logger
-	captcha *gocaptcha.GoCaptcha
+	cache      cache.Cache
+	dynamicCfg *config.DynamicConfig
+	logger     *zap.Logger
+	captcha    *gocaptcha.GoCaptcha
 }
 
 // NewClickCaptLogic .
 func NewClickCaptLogic(svcCtx *common.SvcContext) *ClickCaptLogic {
 	return &ClickCaptLogic{
-		svcCtx:  svcCtx,
-		cache:   svcCtx.Cache,
-		config:  svcCtx.Config,
-		logger:  svcCtx.Logger,
-		captcha: svcCtx.Captcha,
+		svcCtx:     svcCtx,
+		cache:      svcCtx.Cache,
+		dynamicCfg: svcCtx.DynamicConfig,
+		logger:     svcCtx.Logger,
+		captcha:    svcCtx.Captcha,
 	}
 }
 
 // GetData .
-func (cl *ClickCaptLogic) GetData(ctx context.Context, ctype, theme, lang int) (res *adapt.CaptData, err error) {
+func (cl *ClickCaptLogic) GetData(ctx context.Context, id string) (res *adapt.CaptData, err error) {
 	res = &adapt.CaptData{}
 
-	if ctype < 0 {
-		return nil, fmt.Errorf("missing parameter")
+	if id == "" {
+		return nil, fmt.Errorf("missing id parameter")
 	}
 
-	captData, err := cl.captcha.ClickCaptInstance.Generate()
+	var capt *gocaptcha.ClickCaptInstance
+	switch cl.svcCtx.Captcha.GetCaptTypeWithKey(id) {
+	case consts.GoCaptchaTypeClick:
+		capt = cl.svcCtx.Captcha.GetClickInstanceWithKey(id)
+		break
+	case consts.GoCaptchaTypeClickShape:
+		capt = cl.svcCtx.Captcha.GetClickShapeInstanceWithKey(id)
+		break
+	}
+	if capt == nil || capt.Instance == nil {
+		return nil, fmt.Errorf("missing captcha type")
+	}
+
+	captData, err := capt.Instance.Generate()
 	if err != nil {
 		return nil, fmt.Errorf("generate captcha data failed: %v", err)
 	}
@@ -85,7 +99,7 @@ func (cl *ClickCaptLogic) GetData(ctx context.Context, ctype, theme, lang int) (
 		return res, fmt.Errorf("failed to write cache:: %v", err)
 	}
 
-	opts := cl.captcha.ClickCaptInstance.GetOptions()
+	opts := capt.Instance.GetOptions()
 	res.MasterImageWidth = int32(opts.GetImageSize().Width)
 	res.MasterImageHeight = int32(opts.GetImageSize().Height)
 	res.ThumbImageWidth = int32(opts.GetThumbImageSize().Width)
@@ -103,6 +117,10 @@ func (cl *ClickCaptLogic) CheckData(ctx context.Context, key string, dots string
 	cacheData, err := cl.cache.GetCache(ctx, key)
 	if err != nil {
 		return false, fmt.Errorf("failed to get cache: %v", err)
+	}
+
+	if cacheData == "" {
+		return false, nil
 	}
 
 	src := strings.Split(dots, ",")

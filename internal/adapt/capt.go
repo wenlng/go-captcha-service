@@ -26,7 +26,7 @@ type CaptDataResponse struct {
 	ThumbImageSize    int32  `json:"thumb_size,omitempty"`
 	DisplayX          int32  `json:"display_x,omitempty"`
 	DisplayY          int32  `json:"display_y,omitempty"`
-	Type              int32  `json:"type,omitempty"`
+	Id                string `json:"id,omitempty"`
 }
 
 type CaptNormalDataResponse struct {
@@ -39,4 +39,9 @@ type CaptStatusDataResponse struct {
 	Code    int32  `json:"code" default:"200"`
 	Message string `json:"message" default:""`
 	Data    string `json:"status" default:""`
+}
+
+type CaptStatusInfo struct {
+	Info   interface{} `json:"info"`
+	Status int         `json:"status"`
 }

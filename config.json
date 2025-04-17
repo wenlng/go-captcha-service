@@ -14,6 +14,6 @@
   "rate_limit_qps": 1000,
   "rate_limit_burst": 1000,
   "load_balancer": "round-robin",
-  "api_keys": ["my-secret-key-123", "another-key-456"],
-  "enable_cors": true
+  "enable_cors": true,
+  "api_keys": ["my-secret-key-123", "another-key-456"]
 }

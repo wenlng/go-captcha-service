@@ -153,6 +153,6 @@ help:
 	@echo "  docker-build     : Build Docker image locally (binary)"
 	@echo "  docker-build-multi : Build and push multi-arch Docker image (binary)"
 	@echo "  docker-run       : Run Docker container locally (binary)"
-	@echo "  pm2-deploy       : Deploy with PM2 locally"
-	@echo "  pm2-deploy-prod  : Deploy with PM2 in production"
+	@echo "  pm2-run          : Run with PM2 locally"
+	@echo "  pm2-deploy  	  : Deploy with PM2 in production"
 	@echo "  help             : Show this help message"
