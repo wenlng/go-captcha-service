@@ -1,3 +1,9 @@
+/**
+ * @Author Awen
+ * @Date 2025/04/04
+ * @Email wengaolng@gmail.com
+ **/
+
 package gocaptcha
 
 import (
@@ -207,8 +213,8 @@ func (gc *GoCaptcha) UpdateRotateInstance(configMaps map[string]config.RotateCon
 	return nil
 }
 
-// HotUpdate .
-func (gc *GoCaptcha) HotUpdate(dyCnf *config.DynamicCaptchaConfig) error {
+// HotSetup .
+func (gc *GoCaptcha) HotSetup(dyCnf *config.DynamicCaptchaConfig) error {
 	cnf := dyCnf.Get()
 
 	var err error
@@ -243,7 +249,9 @@ func (gc *GoCaptcha) HotUpdate(dyCnf *config.DynamicCaptchaConfig) error {
 // Setup initializes the captcha
 func Setup(dyCnf *config.DynamicCaptchaConfig) (*GoCaptcha, error) {
 	gc := newGoCaptcha()
-	err := gc.HotUpdate(dyCnf)
+	gc.DynamicCnf = dyCnf
+
+	err := gc.HotSetup(dyCnf)
 	if err != nil {
 		return nil, err
 	}

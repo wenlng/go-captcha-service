@@ -4,10 +4,10 @@
 BINARY_NAME=go-captcha-service
 VERSION?=0.1.0
 BUILD_DIR=build
-PLATFORMS=linux/amd64 linux/arm64 linux/arm/v7 darwin/amd64 darwin/arm64 windows/amd64
+PLATFORMS=darwin/amd64 darwin/arm64 linux/amd64 linux/arm64 linux/arm/v7 windows/amd64
 DOCKER_IMAGE?=wenlng/go-captcha-service
 GO=go
-GOFLAGS=-ldflags="-w -s" -v -a -gcflags=-trimpath=$(PWD) -asmflags=-trimpath=$(PWD)
+GOFLAGS=-ldflags="-w -s" -v -a -trimpath
 COPY_BUILD_FILES=config.json ecosystem.config.js
 
 # Default Target
@@ -46,6 +46,11 @@ proto:
 start-dev:
 	modd -f modd.conf
 	@echo "Starting modd successfully"
+
+.PHONY: start
+start:
+	go run ./cmd/go-captcha-service/main.go -config config.dev.json -gocaptcha-config gocaptcha.dev.json
+	@echo "Starting service successfully"
 
 # Build the application
 .PHONY: build
@@ -143,7 +148,8 @@ help:
 	@echo "Available targets:"
 	@echo "  deps             : Install dependencies"
 	@echo "  proto            : Generate Protobuf code"
-	@echo "  start-dev        : Opening the development environment"
+	@echo "  start            : Opening the development environment"
+	@echo "  start-dev        : Opening the hot reload development environment"
 	@echo "  build            : Build binary for current platform"
 	@echo "  build-multi      : Build binaries for all platforms"
 	@echo "  package          : Package binaries with config.json"

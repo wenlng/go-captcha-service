@@ -43,7 +43,11 @@ unpackage
 logs
 *.log
 
+gocaptcha.dd.dev.json
+
 # resources
+resources/*
+!resources/gocaptcha
 resources/gocaptcha/fonts/*
 resources/gocaptcha/master_images/*
 resources/gocaptcha/shape_images/*

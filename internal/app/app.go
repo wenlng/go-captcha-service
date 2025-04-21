@@ -1,14 +1,18 @@
+/**
+ * @Author Awen
+ * @Date 2025/04/04
+ * @Email wengaolng@gmail.com
+ **/
+
 package app
 
 import (
 	"context"
-	"errors"
 	"flag"
 	"fmt"
 	"net"
 	"net/http"
 	"os"
-	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -16,12 +20,14 @@ import (
 	"github.com/wenlng/go-captcha-service/internal/cache"
 	"github.com/wenlng/go-captcha-service/internal/common"
 	"github.com/wenlng/go-captcha-service/internal/config"
+	"github.com/wenlng/go-captcha-service/internal/helper"
 	"github.com/wenlng/go-captcha-service/internal/middleware"
 	"github.com/wenlng/go-captcha-service/internal/pkg/gocaptcha"
 	config2 "github.com/wenlng/go-captcha-service/internal/pkg/gocaptcha/config"
 	"github.com/wenlng/go-captcha-service/internal/server"
-	"github.com/wenlng/go-captcha-service/internal/service_discovery"
 	"github.com/wenlng/go-captcha-service/proto"
+	"github.com/wenlng/go-service-link/dynaconfig"
+	"github.com/wenlng/go-service-link/servicediscovery"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 )
@@ -31,28 +37,23 @@ type App struct {
 	logger         *zap.Logger
 	dynamicCfg     *config.DynamicConfig
 	dynamicCaptCfg *config2.DynamicCaptchaConfig
-	cache          cache.Cache
-	discovery      service_discovery.ServiceDiscovery
+	cacheMgr       *cache.CacheManager
+	discovery      servicediscovery.ServiceDiscovery
+	configManager  *dynaconfig.ConfigManager
 	httpServer     *http.Server
 	grpcServer     *grpc.Server
 	cacheBreaker   *gobreaker.CircuitBreaker
 	limiter        *middleware.DynamicLimiter
+	captcha        *gocaptcha.GoCaptcha
 }
 
-// CacheType .
-const (
-	CacheTypeRedis    string = "redis"
-	CacheTypeMemory          = "memory"
-	CacheTypeEtcd            = "etcd"
-	CacheTypeMemcache        = "memcache"
-)
-
-// ServiceDiscoveryType .
+// ServiceDiscovery .
 const (
 	ServiceDiscoveryTypeEtcd      string = "etcd"
 	ServiceDiscoveryTypeZookeeper        = "zookeeper"
 	ServiceDiscoveryTypeConsul           = "consul"
 	ServiceDiscoveryTypeNacos            = "nacos"
+	ServiceDiscoveryTypeNone             = "none"
 )
 
 // NewApp initializes the application
@@ -60,24 +61,35 @@ func NewApp() (*App, error) {
 
 	// Parse command-line flags
 	configFile := flag.String("config", "config.json", "Path to config file")
-	gocaptchaConfigFile := flag.String("gocaptcha.json", "gocaptcha.json", "Path to gocaptcha config file")
+	gocaptchaConfigFile := flag.String("gocaptcha-config", "gocaptcha.json", "Path to gocaptcha config file")
 	serviceName := flag.String("service-name", "", "Name for service")
 	httpPort := flag.String("http-port", "", "Port for HTTP server")
 	grpcPort := flag.String("grpc-port", "", "Port for gRPC server")
 	redisAddrs := flag.String("redis-addrs", "", "Comma-separated Redis cluster addresses")
 	etcdAddrs := flag.String("etcd-addrs", "", "Comma-separated etcd addresses")
 	memcacheAddrs := flag.String("memcache-addrs", "", "Comma-separated Memcached addresses")
-	cacheType := flag.String("cache-type", "", "Cache type: redis, memory, etcd, memcache")
-	cacheTTL := flag.Int("cache-ttl", 0, "Cache TTL in seconds")
-	cacheCleanupInt := flag.Int("cache-cleanup-interval", 0, "Cache cleanup interval in seconds")
-	cacheKeyPrefix := flag.Int("cache-key-prefix", 0, "Key prefix for cache")
+	cacheType := flag.String("cache-type", "", "CacheManager type: redis, memory, etcd, memcache")
+	cacheTTL := flag.Int("cache-ttl", 0, "CacheManager TTL in seconds")
+	cacheKeyPrefix := flag.String("cache-key-prefix", "GO_CAPTCHA_DATA:", "Key prefix for cache")
 	serviceDiscovery := flag.String("service-discovery", "", "Service discovery: etcd, zookeeper, consul, nacos")
-	serviceDiscoveryAddrs := flag.String("service-discovery-addrs", "", "Service discovery addresses")
+	serviceDiscoveryAddrs := flag.String("service-discovery-addrs", "", "Comma-separated list of service discovery server addresses")
+	serviceDiscoveryTTL := flag.Int("service-discovery-ttl", 10, "Time-to-live in seconds for service discovery registrations")
+	serviceDiscoveryKeepAlive := flag.Int("service-discovery-keep-alive", 3, "Duration in seconds for service discovery keep-alive interval")
+	serviceDiscoveryMaxRetries := flag.Int("service-discovery-max-retries", 3, "Maximum number of retries for service discovery operations")
+	serviceDiscoveryBaseRetryDelay := flag.Int("service-discovery-base-retry-delay", 3, "Base delay in milliseconds for service discovery retry attempts")
+	serviceDiscoveryUsername := flag.String("service-discovery-username", "", "Username for service discovery authentication")
+	serviceDiscoveryPassword := flag.String("service-discovery-password", "", "Password for service discovery authentication")
+	serviceDiscoveryTlsServerName := flag.String("service-discovery-tls-server-name", "", "TLS server name for service discovery connection")
+	serviceDiscoveryTlsAddress := flag.String("service-discovery-tls-address", "", "TLS address for service discovery server")
+	serviceDiscoveryTlsCertFile := flag.String("service-discovery-tls-cert-file", "", "Path to TLS certificate file for service discovery")
+	serviceDiscoveryTlsKeyFile := flag.String("service-discovery-tls-key-file", "", "Path to TLS key file for service discovery")
+	serviceDiscoveryTlsCaFile := flag.String("service-discovery-tls-ca-file", "", "Path to TLS CA file for service discovery")
 	rateLimitQPS := flag.Int("rate-limit-qps", 0, "Rate limit QPS")
 	rateLimitBurst := flag.Int("rate-limit-burst", 0, "Rate limit burst")
-	loadBalancer := flag.String("load-balancer", "", "Load balancer: round-robin, consistent-hash")
 	apiKeys := flag.String("api-keys", "", "Comma-separated API keys")
 	logLevel := flag.String("log-level", "", "Set log level: error, debug, warn, info")
+	enableServiceDiscovery := flag.Bool("enable-service-discovery", false, "Enable service discovery")
+	enableDynamicConfig := flag.Bool("enable-dynamic-config", false, "Enable dynamic config")
 	healthCheckFlag := flag.Bool("health-check", false, "Run health check and exit")
 	enableCorsFlag := flag.Bool("enable-cors", false, "Enable cross-domain resources")
 	flag.Parse()
@@ -87,61 +99,75 @@ func NewApp() (*App, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize logger: %v", err)
 	}
-	setLoggerLevel(logger, *logLevel)
+	setupLoggerLevel(logger, *logLevel)
 
 	// Load configuration
-	dc, err := config.NewDynamicConfig(*configFile)
+	dc, err := config.NewDynamicConfig(*configFile, true)
 	if err != nil {
-		logger.Warn("Failed to load config, using defaults", zap.Error(err))
-		dc = &config.DynamicConfig{Config: config.DefaultConfig()}
+		if helper.FileExists(*configFile) {
+			logger.Warn("[App] Failed to load of the config.json file, using defaults", zap.Error(err))
+		} else {
+			logger.Warn("[App] No configuration file 'config.json' was provided for the application. Use the defaults configuration")
+		}
+		dc = config.DefaultDynamicConfig()
 	}
 	// Register hot update callback
-	dc.RegisterHotCallbackHook("UPDATE_LOG_LEVEL", func(dnCfg *config.DynamicConfig) {
-		setLoggerLevel(logger, dnCfg.Get().LogLevel)
+	dc.RegisterHotCallback("UPDATE_LOG_LEVEL", func(dnCfg *config.DynamicConfig, hotType config.HotCallbackType) {
+		setupLoggerLevel(logger, dnCfg.Get().LogLevel)
 	})
 
 	// Load configuration
-	dgc, err := config2.NewDynamicConfig(*gocaptchaConfigFile)
+	dgc, err := config2.NewDynamicConfig(*gocaptchaConfigFile, true)
 	if err != nil {
-		logger.Warn("Failed to load gocaptcha config, using defaults", zap.Error(err))
-		dgc = &config2.DynamicCaptchaConfig{Config: config2.DefaultConfig()}
+		if helper.FileExists(*gocaptchaConfigFile) {
+			logger.Warn("[App] Failed to load of the gocaptcha.json file, using defaults", zap.Error(err))
+		} else {
+			logger.Warn("[App] No configuration file 'gocaptcha.json' was provided for the application. Use the defaults configuration")
+		}
+		dgc = config2.DefaultDynamicConfig()
 	}
 
 	// Merge command-line flags
 	cfg := dc.Get()
 	cfg = config.MergeWithFlags(cfg, map[string]interface{}{
-		"service-name":            *serviceName,
-		"http-port":               *httpPort,
-		"grpc-port":               *grpcPort,
-		"redis-addrs":             *redisAddrs,
-		"etcd-addrs":              *etcdAddrs,
-		"memcache-addrs":          *memcacheAddrs,
-		"cache-type":              *cacheType,
-		"cache-ttl":               *cacheTTL,
-		"cache-cleanup-interval":  *cacheCleanupInt,
-		"cache-key-prefix":        *cacheKeyPrefix,
-		"service-discovery":       *serviceDiscovery,
-		"service-discovery-addrs": *serviceDiscoveryAddrs,
-		"rate-limit-qps":          *rateLimitQPS,
-		"rate-limit-burst":        *rateLimitBurst,
-		"load-balancer":           *loadBalancer,
-		"enable-cors":             *enableCorsFlag,
-		"api-keys":                *apiKeys,
+		"service-name":                       *serviceName,
+		"http-port":                          *httpPort,
+		"grpc-port":                          *grpcPort,
+		"redis-addrs":                        *redisAddrs,
+		"etcd-addrs":                         *etcdAddrs,
+		"memcache-addrs":                     *memcacheAddrs,
+		"cache-type":                         *cacheType,
+		"cache-ttl":                          *cacheTTL,
+		"cache-key-prefix":                   *cacheKeyPrefix,
+		"enable-service-discovery":           *enableServiceDiscovery,
+		"service-discovery":                  *serviceDiscovery,
+		"service-discovery-addrs":            *serviceDiscoveryAddrs,
+		"service-discovery-ttl":              serviceDiscoveryTTL,
+		"service-discovery-keep-alive":       serviceDiscoveryKeepAlive,
+		"service-discovery-max-retries":      serviceDiscoveryMaxRetries,
+		"service-discovery-base-retry-delay": serviceDiscoveryBaseRetryDelay,
+		"service-discovery-username":         serviceDiscoveryUsername,
+		"service-discovery-password":         serviceDiscoveryPassword,
+		"service-discovery-tls-server-name":  serviceDiscoveryTlsServerName,
+		"service-discovery-tls-address":      serviceDiscoveryTlsAddress,
+		"service-discovery-tls-cert-file":    serviceDiscoveryTlsCertFile,
+		"service-discovery-tls-key-file":     serviceDiscoveryTlsKeyFile,
+		"service-discovery-tls-ca-file":      serviceDiscoveryTlsCaFile,
+		"rate-limit-qps":                     *rateLimitQPS,
+		"rate-limit-burst":                   *rateLimitBurst,
+		"enable-cors":                        *enableCorsFlag,
+		"enable-dynamic-config":              *enableDynamicConfig,
+		"api-keys":                           *apiKeys,
 	})
 	if err = dc.Update(cfg); err != nil {
-		logger.Fatal("Configuration validation failed", zap.Error(err))
+		logger.Fatal("[App] Configuration validation failed", zap.Error(err))
 	}
 
 	// Initialize rate limiter
 	limiter := middleware.NewDynamicLimiter(cfg.RateLimitQPS, cfg.RateLimitBurst)
-	go func() {
-		ticker := time.NewTicker(1 * time.Second)
-		defer ticker.Stop()
-		for range ticker.C {
-			newCfg := dc.Get()
-			limiter.Update(newCfg.RateLimitQPS, newCfg.RateLimitBurst)
-		}
-	}()
+	dc.RegisterHotCallback("UPDATE_LIMITER", func(dnCfg *config.DynamicConfig, hotType config.HotCallbackType) {
+		limiter.Update(dnCfg.Get().RateLimitQPS, dnCfg.Get().RateLimitBurst)
+	})
 
 	// Initialize circuit breaker
 	cacheBreaker := gobreaker.NewCircuitBreaker(gobreaker.Settings{
@@ -154,56 +180,40 @@ func NewApp() (*App, error) {
 		},
 	})
 
-	// Initialize cache
-	var curCache cache.Cache
-	ttl := time.Duration(cfg.CacheTTL) * time.Second
-	cleanInt := time.Duration(cfg.CacheCleanupInt) * time.Second
-	switch cfg.CacheType {
-	case CacheTypeRedis:
-		curCache, err = cache.NewRedisClient(cfg.RedisAddrs, cfg.CacheKeyPrefix, ttl)
-		if err != nil {
-			logger.Fatal("Failed to initialize Redis", zap.Error(err))
-		}
-	case CacheTypeMemory:
-		curCache = cache.NewMemoryCache(cfg.CacheKeyPrefix, ttl, cleanInt)
-	case CacheTypeEtcd:
-		curCache, err = cache.NewEtcdClient(cfg.EtcdAddrs, cfg.CacheKeyPrefix, ttl)
-		if err != nil {
-			logger.Fatal("Failed to initialize etcd", zap.Error(err))
-		}
-	case CacheTypeMemcache:
-		curCache, err = cache.NewMemcacheClient(cfg.MemcacheAddrs, cfg.CacheKeyPrefix, ttl)
-		if err != nil {
-			logger.Fatal("Failed to initialize Memcached", zap.Error(err))
-		}
-	default:
-		logger.Fatal("Invalid curCache type", zap.String("type", cfg.CacheType))
+	// Setup cache
+	cacheMgr, err := setupCacheManager(dc, logger)
+	if err != nil {
+		logger.Fatal("[App] Create cache manager", zap.Error(err))
 	}
 
-	// Initialize service discovery
-	var discovery service_discovery.ServiceDiscovery
-	if cfg.ServiceDiscovery != "" {
-		switch cfg.ServiceDiscovery {
-		case ServiceDiscoveryTypeEtcd:
-			discovery, err = service_discovery.NewEtcdDiscovery(cfg.ServiceDiscoveryAddrs, 10)
-		case ServiceDiscoveryTypeZookeeper:
-			discovery, err = service_discovery.NewZookeeperDiscovery(cfg.ServiceDiscoveryAddrs, 10)
-		case ServiceDiscoveryTypeConsul:
-			discovery, err = service_discovery.NewConsulDiscovery(cfg.ServiceDiscoveryAddrs, 10)
-		case ServiceDiscoveryTypeNacos:
-			discovery, err = service_discovery.NewNacosDiscovery(cfg.ServiceDiscoveryAddrs, 10)
-		default:
-			logger.Fatal("Invalid service discovery type", zap.String("type", cfg.ServiceDiscovery))
-		}
-		if err != nil {
-			logger.Fatal("Failed to initialize service discovery", zap.Error(err))
-		}
+	// Setup service discovery
+	discovery, err := setupServiceDiscovery(dc, logger)
+	if err != nil {
+		logger.Fatal("[App] Setup service discovery", zap.Error(err))
 	}
+
+	// Setup dynamic config
+	configManager, err := setupDynamicConfig(dc, dgc, logger)
+	if err != nil {
+		logger.Fatal("[App] Setup dynamic config manager", zap.Error(err))
+	}
+
+	// Setup captcha
+	captcha, err := gocaptcha.Setup(dgc)
+	if err != nil {
+		logger.Fatal("[App] Failed to setup gocaptcha: ", zap.Error(err))
+	}
+	dgc.RegisterHotCallback("GENERATE_CAPTCHA", func(captchaConfig *config2.DynamicCaptchaConfig, callbackType config2.HotCallbackType) {
+		err = captcha.HotSetup(captchaConfig)
+		if err != nil {
+			logger.Error("[App] Failed to hot update gocaptcha, without any change: ", zap.Error(err))
+		}
+	})
 
 	// Perform health check if requested
 	if *healthCheckFlag {
-		if err = healthCheck(":"+cfg.HTTPPort, ":"+cfg.GRPCPort); err != nil {
-			logger.Error("Health check failed", zap.Error(err))
+		if err = setupHealthCheck(":"+cfg.HTTPPort, ":"+cfg.GRPCPort); err != nil {
+			logger.Error("[App] Filed to health check", zap.Error(err))
 			os.Exit(1)
 		}
 		os.Exit(0)
@@ -213,80 +223,42 @@ func NewApp() (*App, error) {
 		logger:         logger,
 		dynamicCfg:     dc,
 		dynamicCaptCfg: dgc,
-		cache:          curCache,
+		cacheMgr:       cacheMgr,
 		discovery:      discovery,
+		configManager:  configManager,
 		cacheBreaker:   cacheBreaker,
 		limiter:        limiter,
+		captcha:        captcha,
 	}, nil
 }
 
-// setLoggerLevel setting the log Level
-func setLoggerLevel(logger *zap.Logger, level string) {
-	switch level {
-	case "error":
-		logger.WithOptions(zap.IncreaseLevel(zap.ErrorLevel))
-		break
-	case "debug":
-		logger.WithOptions(zap.IncreaseLevel(zap.DebugLevel))
-		break
-	case "warn":
-		logger.WithOptions(zap.IncreaseLevel(zap.WarnLevel))
-		break
-	case "info":
-		logger.WithOptions(zap.IncreaseLevel(zap.InfoLevel))
-		break
-	}
-}
-
-// Start launches the HTTP and gRPC servers
+// Start starting the Application
 func (a *App) Start(ctx context.Context) error {
 	cfg := a.dynamicCfg.Get()
 
-	// Setup captcha
-	captcha, err := gocaptcha.Setup(a.dynamicCaptCfg)
-	if err != nil {
-		a.logger.Fatal("Failed to setup gocaptcha: ", zap.Error(err))
-		return errors.New("setup gocaptcha failed")
-	}
-	captcha.DynamicCnf = a.dynamicCaptCfg
-
-	// Register hot update callback
-	a.dynamicCaptCfg.RegisterHotCallbackHook("GENERATE_CAPTCHA", func(dnCfg *config2.DynamicCaptchaConfig) {
-		err = captcha.HotUpdate(dnCfg)
-		if err != nil {
-			a.logger.Fatal("Failed to hot update gocaptcha, without any change: ", zap.Error(err))
-		}
-	})
-
 	// Register service with discovery
-	var instanceID string
-	if a.discovery != nil {
-		instanceID = uuid.New().String()
-		httpPortInt, _ := strconv.Atoi(cfg.HTTPPort)
-		grpcPortInt, _ := strconv.Atoi(cfg.GRPCPort)
-		if err = a.discovery.Register(ctx, cfg.ServiceName, instanceID, "127.0.0.1", httpPortInt, grpcPortInt); err != nil {
-			return fmt.Errorf("failed to register service: %v", err)
-		}
-		go a.updateInstances(ctx, instanceID)
+	err := a.startDiscoveryRegister(ctx, &cfg)
+	if err != nil {
+		return err
 	}
 
 	// Service context
 	svcCtx := common.NewSvcContext()
-	svcCtx.Cache = a.cache
+	svcCtx.CacheMgr = a.cacheMgr
 	svcCtx.DynamicConfig = a.dynamicCfg
 	svcCtx.Logger = a.logger
-	svcCtx.Captcha = captcha
+	svcCtx.Captcha = a.captcha
 
 	// Start HTTP server
 	if cfg.HTTPPort != "" && cfg.HTTPPort != "0" {
-		if err = a.setupHTTPServer(svcCtx, &cfg); err != nil {
+		if err = a.startHTTPServer(svcCtx, &cfg); err != nil {
 			return err
 		}
 	}
 
 	// Start gRPC server
 	if cfg.GRPCPort != "" && cfg.GRPCPort != "0" {
-		if err = a.setupGRPCServer(svcCtx, &cfg); err != nil {
+		if err = a.startGRPCServer(svcCtx, &cfg); err != nil {
 			return err
 		}
 	}
@@ -294,11 +266,22 @@ func (a *App) Start(ctx context.Context) error {
 	return nil
 }
 
-// setupHttpServer start HTTP server
-func (a *App) setupHTTPServer(svcCtx *common.SvcContext, cfg *config.Config) error {
-	// Register HTTP routes
-	handlers := server.NewHTTPHandlers(svcCtx)
+// startDiscoveryRegister start service discovery register
+func (a *App) startDiscoveryRegister(ctx context.Context, cfg *config.Config) error {
+	var instanceID string
+	if a.discovery != nil {
+		instanceID = uuid.New().String()
+		if err := a.discovery.Register(ctx, cfg.ServiceName, instanceID, "localhost", cfg.HTTPPort, cfg.GRPCPort); err != nil {
+			return fmt.Errorf("failed to register service: %v", err)
+		}
+		go a.watchServiceDiscoveryInstances(ctx, instanceID)
+	}
+	return nil
+}
 
+// startHTTPServer start HTTP server
+func (a *App) startHTTPServer(svcCtx *common.SvcContext, cfg *config.Config) error {
+	handlers := server.NewHTTPHandlers(svcCtx)
 	var middlewares = make([]middleware.HTTPMiddleware, 0)
 
 	// Enable cross-domain resource
@@ -315,85 +298,86 @@ func (a *App) setupHTTPServer(svcCtx *common.SvcContext, cfg *config.Config) err
 
 	mwChain := middleware.NewChainHTTP(middlewares...)
 
-	// Logic Routes
-	http.Handle("/get-data", mwChain.Then(handlers.GetDataHandler))
-	http.Handle("/check-data", mwChain.Then(handlers.CheckDataHandler))
-	http.Handle("/check-status", mwChain.Then(handlers.CheckStatusHandler))
-	http.Handle("/get-status-info", mwChain.Then(handlers.GetStatusInfoHandler))
-	http.Handle("/del-status-data", mwChain.Then(handlers.DelStatusInfoHandler))
+	http.Handle("/v1/get-data", mwChain.Then(handlers.GetDataHandler))
+	http.Handle("/v1/check-data", mwChain.Then(handlers.CheckDataHandler))
+	http.Handle("/v1/check-status", mwChain.Then(handlers.CheckStatusHandler))
+	http.Handle("/v1/get-status-info", mwChain.Then(handlers.GetStatusInfoHandler))
+	http.Handle("/v1/del-status-info", mwChain.Then(handlers.DelStatusInfoHandler))
 	http.Handle("/rate-limit", mwChain.Then(middleware.RateLimitHandler(a.limiter, a.logger)))
 
-	http.Handle("/manage/upload-resource", mwChain.Then(handlers.UploadResourceHandler))
-	http.Handle("/manage/delete-resource", mwChain.Then(handlers.DeleteResourceHandler))
-	http.Handle("/manage/get-resource-list", mwChain.Then(handlers.GetResourceListHandler))
-	http.Handle("/manage/get-config", mwChain.Then(handlers.GetGoCaptchaConfigHandler))
-	http.Handle("/manage/update-hot-config", mwChain.Then(handlers.UpdateHotGoCaptchaConfigHandler))
+	http.Handle("/v1/manage/upload-resource", mwChain.Then(handlers.UploadResourceHandler))
+	http.Handle("/v1/manage/delete-resource", mwChain.Then(handlers.DeleteResourceHandler))
+	http.Handle("/v1/manage/get-resource-list", mwChain.Then(handlers.GetResourceListHandler))
+	http.Handle("/v1/manage/get-config", mwChain.Then(handlers.GetGoCaptchaConfigHandler))
+	http.Handle("/v1/manage/update-hot-config", mwChain.Then(handlers.UpdateHotGoCaptchaConfigHandler))
 
-	// Start HTTP server
 	a.httpServer = &http.Server{
 		Addr: ":" + cfg.HTTPPort,
 	}
+
 	go func() {
-		a.logger.Info("Starting HTTP server", zap.String("port", cfg.HTTPPort))
+		a.logger.Info("[App] Starting HTTP server", zap.String("port", cfg.HTTPPort))
 		if err := a.httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			a.logger.Fatal("HTTP server failed", zap.Error(err))
+			a.logger.Fatal("[App] HTTP server failed", zap.Error(err))
 		}
 	}()
 
 	return nil
 }
 
-// setupGRPCServer start gRPC server
-func (a *App) setupGRPCServer(svcCtx *common.SvcContext, cfg *config.Config) error {
+// startGRPCServer start gRPC server
+func (a *App) startGRPCServer(svcCtx *common.SvcContext, cfg *config.Config) error {
 	lis, err := net.Listen("tcp", ":"+cfg.GRPCPort)
 	if err != nil {
 		return fmt.Errorf("failed to listen: %v", err)
 	}
-	a.grpcServer = grpc.NewServer(
-		grpc.UnaryInterceptor(middleware.UnaryServerInterceptor(a.dynamicCfg, a.logger, a.cacheBreaker)),
-	)
+
+	interceptor := middleware.UnaryServerInterceptor(a.dynamicCfg, a.logger, a.cacheBreaker)
+	a.grpcServer = grpc.NewServer(grpc.UnaryInterceptor(interceptor))
 	proto.RegisterGoCaptchaServiceServer(a.grpcServer, server.NewGoCaptchaServer(svcCtx))
+
 	go func() {
-		a.logger.Info("Starting gRPC server", zap.String("port", cfg.GRPCPort))
+		a.logger.Info("[App] Starting gRPC server", zap.String("port", cfg.GRPCPort))
 		if err := a.grpcServer.Serve(lis); err != nil && err != grpc.ErrServerStopped {
-			a.logger.Fatal("gRPC server failed", zap.Error(err))
+			a.logger.Fatal("[App] gRPC server failed", zap.Error(err))
 		}
 	}()
 	return nil
 }
 
-// updateInstances periodically updates service instances
-func (a *App) updateInstances(ctx context.Context, instanceID string) {
-	ticker := time.NewTicker(10 * time.Second)
-	cfg := a.dynamicCfg.Get()
+// watchServiceDiscoveryInstances periodically updates service instances
+func (a *App) watchServiceDiscoveryInstances(ctx context.Context, instanceID string) {
+	if a.discovery == nil {
+		return
+	}
 
-	defer ticker.Stop()
+	cfg := a.dynamicCfg.Get()
+	ch, err := a.discovery.Watch(ctx, cfg.ServiceName)
+	if err != nil {
+		a.logger.Fatal("[App] Failed to service discovery watch", zap.Error(err))
+	}
+
 	for {
 		select {
 		case <-ctx.Done():
 			if a.discovery != nil {
-				if err := a.discovery.Deregister(ctx, instanceID); err != nil {
-					a.logger.Error("Failed to deregister service", zap.Error(err))
+				if err = a.discovery.Deregister(ctx, cfg.ServiceName, instanceID); err != nil {
+					a.logger.Error("[App] Failed to deregister service", zap.Error(err))
 				}
 			}
 			return
-		case <-ticker.C:
-			if a.discovery == nil {
-				continue
+		case instances, ok := <-ch:
+			if !ok {
+				return
 			}
-			instances, err := a.discovery.Discover(ctx, cfg.ServiceName)
-			if err != nil {
-				a.logger.Error("Failed to discover instances", zap.Error(err))
-				continue
-			}
-			a.logger.Info("Discovered instances", zap.Int("count", len(instances)))
+			a.logger.Info("[App] Discovered service instances", zap.Int("count", len(instances)))
 		}
 	}
 }
 
 // Shutdown gracefully stops the application
 func (a *App) Shutdown() {
-	a.logger.Info("Received shutdown signal, shutting down gracefully")
+	a.logger.Info("[App] Received shutdown signal, shutting down gracefully")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -403,70 +387,43 @@ func (a *App) Shutdown() {
 	// Stop HTTP server
 	if a.httpServer != nil {
 		if err := a.httpServer.Shutdown(ctx); err != nil {
-			a.logger.Error("HTTP server shutdown error", zap.Error(err))
+			a.logger.Error("[App] HTTP server shutdown error", zap.Error(err))
 		} else {
-			a.logger.Info("HTTP server shut down successfully")
+			a.logger.Info("[App] HTTP server shut down successfully")
 		}
 	}
 
 	// Stop gRPC server
 	if a.grpcServer != nil {
 		a.grpcServer.GracefulStop()
-		a.logger.Info("gRPC server shut down successfully")
+		a.logger.Info("[App] gRPC server shut down successfully")
 	}
 
-	// Close cache
-	if redisClient, ok := a.cache.(*cache.RedisClient); ok {
-		if err := redisClient.Close(); err != nil {
-			a.logger.Error("Redis client close error", zap.Error(err))
-		} else {
-			a.logger.Info("Redis client closed successfully")
-		}
-	}
-	if memoryCache, ok := a.cache.(*cache.MemoryCache); ok {
-		memoryCache.Stop()
-		a.logger.Info("Memory cache stopped successfully")
-	}
-	if etcdClient, ok := a.cache.(*cache.EtcdClient); ok {
-		if err := etcdClient.Close(); err != nil {
-			a.logger.Error("etcd client close error", zap.Error(err))
-		} else {
-			a.logger.Info("etcd client closed successfully")
-		}
-	}
-	if memcacheClient, ok := a.cache.(*cache.MemcacheClient); ok {
-		if err := memcacheClient.Close(); err != nil {
-			a.logger.Error("Memcached client close error", zap.Error(err))
-		} else {
-			a.logger.Info("Memcached client closed successfully")
-		}
+	// Stop cache
+	err := a.cacheMgr.Close()
+	if err != nil {
+		a.logger.Error("[App] CacheManager client close error", zap.Error(err))
+	} else {
+		a.logger.Info("[App] CacheManager client stopped successfully", zap.Error(err))
 	}
 
-	// Close service discovery
+	// Stop service discovery
 	if a.discovery != nil {
 		if err := a.discovery.Close(); err != nil {
-			a.logger.Error("Service discovery close error", zap.Error(err))
+			a.logger.Error("[App] Service discovery close error", zap.Error(err))
 		} else {
-			a.logger.Info("Service discovery closed successfully")
+			a.logger.Info("[App] Service discovery closed successfully")
 		}
 	}
 
-	a.logger.Info("App service shutdown")
-}
-
-// healthCheck performs a health check on HTTP and gRPC servers
-func healthCheck(httpAddr, grpcAddr string) error {
-	resp, err := http.Get("http://localhost" + httpAddr + "/read?key=test")
-	if err != nil || resp.StatusCode != http.StatusNotFound {
-		return fmt.Errorf("HTTP health check failed: %v", err)
+	// Stop config manager
+	if a.configManager != nil {
+		if err = a.configManager.Close(); err != nil {
+			a.logger.Error("[App] Config manager close error", zap.Error(err))
+		} else {
+			a.logger.Info("[App] Config manager closed successfully")
+		}
 	}
-	resp.Body.Close()
 
-	conn, err := net.DialTimeout("tcp", "localhost"+grpcAddr, 1*time.Second)
-	if err != nil {
-		return fmt.Errorf("gRPC health check failed: %v", err)
-	}
-	conn.Close()
-
-	return nil
+	a.logger.Info("[App] App service shutdown")
 }

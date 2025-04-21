@@ -1,3 +1,9 @@
+/**
+ * @Author Awen
+ * @Date 2025/04/04
+ * @Email wengaolng@gmail.com
+ **/
+
 package logic
 
 import (
@@ -16,7 +22,7 @@ import (
 type CommonLogic struct {
 	svcCtx *common.SvcContext
 
-	cache      cache.Cache
+	cacheMgr   *cache.CacheManager
 	dynamicCfg *config.DynamicConfig
 	logger     *zap.Logger
 	captcha    *gocaptcha.GoCaptcha
@@ -26,7 +32,7 @@ type CommonLogic struct {
 func NewCommonLogic(svcCtx *common.SvcContext) *CommonLogic {
 	return &CommonLogic{
 		svcCtx:     svcCtx,
-		cache:      svcCtx.Cache,
+		cacheMgr:   svcCtx.CacheMgr,
 		dynamicCfg: svcCtx.DynamicConfig,
 		logger:     svcCtx.Logger,
 		captcha:    svcCtx.Captcha,
@@ -39,7 +45,7 @@ func (cl *CommonLogic) CheckStatus(ctx context.Context, key string) (ret bool, e
 		return false, fmt.Errorf("invalid key")
 	}
 
-	cacheData, err := cl.cache.GetCache(ctx, key)
+	cacheData, err := cl.cacheMgr.GetCache().GetCache(ctx, key)
 	if err != nil {
 		return false, fmt.Errorf("failed to get cache: %v", err)
 	}
@@ -65,7 +71,7 @@ func (cl *CommonLogic) GetStatusInfo(ctx context.Context, key string) (data *cac
 
 	captData := &cache.CaptCacheData{}
 
-	cacheData, err := cl.cache.GetCache(ctx, key)
+	cacheData, err := cl.cacheMgr.GetCache().GetCache(ctx, key)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get cache: %v", err)
 	}
@@ -89,7 +95,7 @@ func (cl *CommonLogic) DelStatusInfo(ctx context.Context, key string) (ret bool,
 		return false, fmt.Errorf("invalid key")
 	}
 
-	err = cl.cache.DeleteCache(ctx, key)
+	err = cl.cacheMgr.GetCache().DeleteCache(ctx, key)
 	if err != nil {
 		return false, fmt.Errorf("failed to delete cache: %v", err)
 	}

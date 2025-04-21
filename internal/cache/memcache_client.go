@@ -1,3 +1,9 @@
+/**
+ * @Author Awen
+ * @Date 2025/04/04
+ * @Email wengaolng@gmail.com
+ **/
+
 package cache
 
 import (
@@ -15,7 +21,7 @@ type MemcacheClient struct {
 	ttl    time.Duration
 }
 
-// NewMemcacheClient creates a new Memcached client
+// NewMemcacheClient ..
 func NewMemcacheClient(addrs, prefix string, ttl time.Duration) (*MemcacheClient, error) {
 	client := memcache.New(addrs)
 	return &MemcacheClient{client: client, prefix: prefix, ttl: ttl}, nil
@@ -45,7 +51,9 @@ func (c *MemcacheClient) SetCache(ctx context.Context, key, value string) error 
 	return c.client.Set(item)
 }
 
+// DeleteCache ..
 func (c *MemcacheClient) DeleteCache(ctx context.Context, key string) error {
+	key = c.prefix + key
 	err := c.client.Delete(key)
 	if err != nil && err != memcache.ErrCacheMiss {
 		return fmt.Errorf("memcache delete error: %v", err)
@@ -53,7 +61,7 @@ func (c *MemcacheClient) DeleteCache(ctx context.Context, key string) error {
 	return nil
 }
 
-// Close closes the Memcached client
+// Close ..
 func (c *MemcacheClient) Close() error {
 	return nil
 }

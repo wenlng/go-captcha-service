@@ -1,3 +1,9 @@
+/**
+ * @Author Awen
+ * @Date 2025/04/04
+ * @Email wengaolng@gmail.com
+ **/
+
 package server
 
 import (
@@ -47,7 +53,7 @@ func NewHTTPHandlers(svcCtx *common.SvcContext) *HTTPHandlers {
 // GetDataHandler .
 func (h *HTTPHandlers) GetDataHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	resp := &adapt.CaptDataResponse{Code: http.StatusOK, Message: ""}
+	resp := &adapt.CaptNormalDataResponse{Code: http.StatusOK, Message: ""}
 
 	if r.Method != http.MethodGet {
 		middleware.WriteError(w, http.StatusMethodNotAllowed, "method not allowed")
@@ -85,25 +91,27 @@ func (h *HTTPHandlers) GetDataHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err != nil || data == nil {
-		h.logger.Error("failed to get captcha data, err: ", zap.Error(err))
+		h.logger.Warn("[HttpHandler] Failed to get captcha data, err: ", zap.Error(err))
 		middleware.WriteError(w, http.StatusNotFound, "captcha type not found")
 		return
 	}
 
 	resp.Code = http.StatusOK
 	resp.Message = "success"
-	resp.Id = id
 
-	resp.CaptchaKey = data.CaptchaKey
-	resp.MasterImageBase64 = data.MasterImageBase64
-	resp.ThumbImageBase64 = data.ThumbImageBase64
-	resp.MasterImageWidth = data.MasterImageWidth
-	resp.MasterImageHeight = data.MasterImageHeight
-	resp.ThumbImageWidth = data.ThumbImageWidth
-	resp.ThumbImageHeight = data.ThumbImageHeight
-	resp.ThumbImageSize = data.ThumbImageSize
-	resp.DisplayX = data.DisplayX
-	resp.DisplayY = data.DisplayY
+	resp.Data = &adapt.CaptData{
+		Id:                id,
+		CaptchaKey:        data.CaptchaKey,
+		MasterImageBase64: data.MasterImageBase64,
+		ThumbImageBase64:  data.ThumbImageBase64,
+		MasterWidth:       data.MasterWidth,
+		MasterHeight:      data.MasterHeight,
+		ThumbWidth:        data.ThumbWidth,
+		ThumbHeight:       data.ThumbHeight,
+		ThumbSize:         data.ThumbSize,
+		DisplayX:          data.DisplayX,
+		DisplayY:          data.DisplayY,
+	}
 
 	json.NewEncoder(w).Encode(helper.Marshal(resp))
 }
@@ -165,6 +173,7 @@ func (h *HTTPHandlers) CheckDataHandler(w http.ResponseWriter, r *http.Request) 
 	}
 
 	if err != nil {
+		h.logger.Warn("[HttpHandler] Failed to check data, err: ", zap.Error(err))
 		middleware.WriteError(w, http.StatusBadRequest, "failed to check captcha data")
 		return
 	}
@@ -198,7 +207,7 @@ func (h *HTTPHandlers) CheckStatusHandler(w http.ResponseWriter, r *http.Request
 
 	data, err := h.commonLogic.GetStatusInfo(r.Context(), captchaKey)
 	if err != nil {
-		h.logger.Error("failed to check status, err: ", zap.Error(err))
+		h.logger.Warn("[HttpHandler] Failed to check status, err: ", zap.Error(err))
 		middleware.WriteError(w, http.StatusBadRequest, "failed to check status")
 		return
 	}
@@ -231,17 +240,14 @@ func (h *HTTPHandlers) GetStatusInfoHandler(w http.ResponseWriter, r *http.Reque
 
 	data, err := h.commonLogic.GetStatusInfo(r.Context(), captchaKey)
 	if err != nil {
-		h.logger.Error("failed to get status info, err: ", zap.Error(err))
+		h.logger.Warn("[HttpHandler] Failed to get status info, err: ", zap.Error(err))
 		middleware.WriteError(w, http.StatusNotFound, "not found status info")
 		return
 	}
 
 	resp.Code = http.StatusOK
 	if data != nil {
-		resp.Data = &adapt.CaptStatusInfo{
-			Info:   data.Data,
-			Status: data.Status,
-		}
+		resp.Data = data
 	}
 
 	json.NewEncoder(w).Encode(helper.Marshal(resp))
@@ -265,7 +271,7 @@ func (h *HTTPHandlers) DelStatusInfoHandler(w http.ResponseWriter, r *http.Reque
 
 	ret, err := h.commonLogic.DelStatusInfo(r.Context(), captchaKey)
 	if err != nil {
-		h.logger.Error("failed to del status data, err: ", zap.Error(err))
+		h.logger.Warn("[HttpHandler] Failed to del status data, err: ", zap.Error(err))
 		middleware.WriteError(w, http.StatusBadRequest, "not found status info")
 		return
 	}
@@ -305,7 +311,7 @@ func (h *HTTPHandlers) UploadResourceHandler(w http.ResponseWriter, r *http.Requ
 
 	// Parse multipart/form-data
 	if err := r.ParseMultipartForm(maxUploadSize); err != nil {
-		h.logger.Error("Failed to parse form: %v ", zap.Error(err))
+		h.logger.Warn("[HttpHandler] Failed to parse form: %v ", zap.Error(err))
 		middleware.WriteError(w, http.StatusBadRequest, "parse form fail")
 		return
 	}
@@ -318,7 +324,7 @@ func (h *HTTPHandlers) UploadResourceHandler(w http.ResponseWriter, r *http.Requ
 
 	ret, allDone, err := h.resourceLogic.SaveResource(r.Context(), dirname, files)
 	if !ret && err != nil {
-		h.logger.Error("Failed to save resource, err: ", zap.Error(err))
+		h.logger.Warn("[HttpHandler] Failed to save resource, err: ", zap.Error(err))
 		middleware.WriteError(w, http.StatusBadRequest, "save resource fail")
 		return
 	}
@@ -328,6 +334,7 @@ func (h *HTTPHandlers) UploadResourceHandler(w http.ResponseWriter, r *http.Requ
 	}
 
 	if !allDone {
+		resp.Data = "some-files-ok"
 		resp.Message = "some files failed to be uploaded. check if they already exist"
 	}
 
@@ -352,7 +359,7 @@ func (h *HTTPHandlers) GetResourceListHandler(w http.ResponseWriter, r *http.Req
 
 	fileList, err := h.resourceLogic.GetResourceList(r.Context(), resourcePath)
 	if err != nil {
-		h.logger.Error("failed to get resource, err: ", zap.Error(err))
+		h.logger.Warn("[HttpHandler] Failed to get resource, err: ", zap.Error(err))
 		middleware.WriteError(w, http.StatusBadRequest, "get resource fail")
 		return
 	}
@@ -382,7 +389,7 @@ func (h *HTTPHandlers) DeleteResourceHandler(w http.ResponseWriter, r *http.Requ
 
 	ret, err := h.resourceLogic.DelResource(r.Context(), resourcePath)
 	if err != nil {
-		h.logger.Error("failed to delete resource, err: ", zap.Error(err))
+		h.logger.Warn("[HttpHandler] Failed to delete resource, err: ", zap.Error(err))
 		middleware.WriteError(w, http.StatusBadRequest, "delete resource fail")
 		return
 	}
@@ -427,7 +434,7 @@ func (h *HTTPHandlers) UpdateHotGoCaptchaConfigHandler(w http.ResponseWriter, r 
 
 	err := h.svcCtx.Captcha.DynamicCnf.HotUpdate(conf)
 	if err != nil {
-		h.logger.Error("failed to hot update config, err: ", zap.Error(err))
+		h.logger.Warn("[HttpHandler] Failed to hot update config, err: ", zap.Error(err))
 		middleware.WriteError(w, http.StatusBadRequest, "hot update config fail")
 		return
 	}

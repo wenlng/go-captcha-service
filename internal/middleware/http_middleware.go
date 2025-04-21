@@ -1,3 +1,9 @@
+/**
+ * @Author Awen
+ * @Date 2025/04/04
+ * @Email wengaolng@gmail.com
+ **/
+
 package middleware
 
 import (
@@ -72,12 +78,12 @@ func APIKeyMiddleware(dc *config.DynamicConfig, logger *zap.Logger) HTTPMiddlewa
 
 			apiKey := r.Header.Get("X-API-Key")
 			if apiKey == "" {
-				logger.Warn("Missing API Key")
+				logger.Warn("[HttpMiddleware] Missing API Key")
 				WriteError(w, http.StatusUnauthorized, "missing API Key")
 				return
 			}
 			if _, exists := apiKeyMap[apiKey]; !exists {
-				logger.Warn("Invalid API Key", zap.String("key", apiKey))
+				logger.Warn("[HttpMiddleware] Invalid API Key", zap.String("key", apiKey))
 				WriteError(w, http.StatusUnauthorized, "invalid API Key")
 				return
 			}
@@ -91,7 +97,7 @@ func RateLimitMiddleware(limiter *DynamicLimiter, logger *zap.Logger) HTTPMiddle
 	return func(next HandlerFunc) HandlerFunc {
 		return func(w http.ResponseWriter, r *http.Request) {
 			if err := limiter.Wait(r.Context()); err != nil {
-				logger.Warn("Rate limit exceeded", zap.String("client", r.RemoteAddr))
+				logger.Warn("[HttpMiddleware] Rate limit exceeded", zap.String("client", r.RemoteAddr))
 				WriteError(w, http.StatusTooManyRequests, "rate limit exceeded")
 				return
 			}
@@ -106,7 +112,7 @@ func LoggingMiddleware(logger *zap.Logger) HTTPMiddleware {
 		return func(w http.ResponseWriter, r *http.Request) {
 			start := time.Now()
 			next(w, r)
-			logger.Info("HTTP request",
+			logger.Info("[HttpMiddleware] HTTP request",
 				zap.String("method", r.Method),
 				zap.String("path", r.URL.Path),
 				zap.String("client", r.RemoteAddr),
@@ -125,12 +131,12 @@ func CircuitBreakerMiddleware(breaker *gobreaker.CircuitBreaker, logger *zap.Log
 				return nil, nil
 			})
 			if err == gobreaker.ErrOpenState || err == gobreaker.ErrTooManyRequests {
-				logger.Warn("Circuit breaker tripped", zap.Error(err))
+				logger.Warn("[HttpMiddleware] Circuit breaker tripped", zap.Error(err))
 				WriteError(w, http.StatusServiceUnavailable, "service unavailable")
 				return
 			}
 			if err != nil {
-				logger.Error("Circuit breaker error", zap.Error(err))
+				logger.Error("[HttpMiddleware] Circuit breaker error", zap.Error(err))
 				WriteError(w, http.StatusInternalServerError, "internal server error")
 				return
 			}
@@ -162,7 +168,7 @@ func CORSMiddleware(logger *zap.Logger) HTTPMiddleware {
 				w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Custom-Header")
 			}
 
-			w.Header().Set("Access-Control-Max-Age", "86400")          // Cache preflight response for 24 hours
+			w.Header().Set("Access-Control-Max-Age", "86400")          // CacheMgr preflight response for 24 hours
 			w.Header().Set("Access-Control-Allow-Credentials", "true") // Allow credentials if needed
 
 			// Handle preflight (OPTIONS) requests
@@ -224,7 +230,7 @@ func RateLimitHandler(limiter *DynamicLimiter, logger *zap.Logger) HandlerFunc {
 			Burst int `json:"burst"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&params); err != nil {
-			logger.Warn("Invalid rate limit params", zap.Error(err))
+			logger.Warn("[HttpMiddleware] Invalid rate limit params", zap.Error(err))
 			WriteError(w, http.StatusBadRequest, "invalid parameters")
 			return
 		}
@@ -233,7 +239,7 @@ func RateLimitHandler(limiter *DynamicLimiter, logger *zap.Logger) HandlerFunc {
 			return
 		}
 		limiter.Update(params.QPS, params.Burst)
-		logger.Info("Rate limit updated",
+		logger.Info("[HttpMiddleware] Rate limit updated",
 			zap.Int("qps", params.QPS),
 			zap.Int("burst", params.Burst),
 		)

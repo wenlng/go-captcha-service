@@ -1,3 +1,9 @@
+/**
+ * @Author Awen
+ * @Date 2025/04/04
+ * @Email wengaolng@gmail.com
+ **/
+
 package cache
 
 import (
@@ -15,7 +21,7 @@ type RedisClient struct {
 	ttl    time.Duration
 }
 
-// NewRedisClient creates a new Redis client
+// NewRedisClient ..
 func NewRedisClient(addrs, prefix string, ttl time.Duration) (*RedisClient, error) {
 	client := redis.NewClient(&redis.Options{
 		Addr: addrs,
@@ -43,8 +49,9 @@ func (c *RedisClient) SetCache(ctx context.Context, key, value string) error {
 	return c.client.Set(ctx, key, value, c.ttl).Err()
 }
 
-// DeleteCache stores a value in Redis
+// DeleteCache delete a value in Redis
 func (c *RedisClient) DeleteCache(ctx context.Context, key string) error {
+	key = c.prefix + key
 	err := c.client.Del(ctx, key).Err()
 	if err != nil && err != redis.Nil {
 		return fmt.Errorf("redis delete error: %v", err)
@@ -52,7 +59,7 @@ func (c *RedisClient) DeleteCache(ctx context.Context, key string) error {
 	return nil
 }
 
-// Close closes the Redis client
+// Close ..
 func (c *RedisClient) Close() error {
 	return c.client.Close()
 }

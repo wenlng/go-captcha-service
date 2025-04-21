@@ -1,3 +1,9 @@
+/**
+ * @Author Awen
+ * @Date 2025/04/04
+ * @Email wengaolng@gmail.com
+ **/
+
 package common
 
 import (
@@ -7,13 +13,15 @@ import (
 	"go.uber.org/zap"
 )
 
+// SvcContext service context
 type SvcContext struct {
-	Cache         cache.Cache
+	CacheMgr      *cache.CacheManager
 	DynamicConfig *config.DynamicConfig
 	Logger        *zap.Logger
 	Captcha       *gocaptcha.GoCaptcha
 }
 
+// NewSvcContext ..
 func NewSvcContext() *SvcContext {
 	return &SvcContext{}
 }

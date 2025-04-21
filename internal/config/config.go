@@ -11,48 +11,99 @@ import (
 	"sync"
 
 	"github.com/fsnotify/fsnotify"
+	"github.com/wenlng/go-captcha-service/internal/helper"
 )
 
 // Config defines the configuration structure for the application
 type Config struct {
-	ServiceName           string   `json:"service_name"`
-	HTTPPort              string   `json:"http_port"`
-	GRPCPort              string   `json:"grpc_port"`
-	RedisAddrs            string   `json:"redis_addrs"`
-	EtcdAddrs             string   `json:"etcd_addrs"`
-	MemcacheAddrs         string   `json:"memcache_addrs"`
-	CacheType             string   `json:"cache_type"`             // redis, memory, etcd, memcache
-	CacheTTL              int      `json:"cache_ttl"`              // seconds
-	CacheCleanupInt       int      `json:"cache_cleanup_interval"` // seconds
-	CacheKeyPrefix        string   `json:"cache_key_prefix"`
-	ServiceDiscovery      string   `json:"service_discovery"` // etcd, zookeeper, consul, nacos
-	ServiceDiscoveryAddrs string   `json:"service_discovery_addrs"`
-	RateLimitQPS          int      `json:"rate_limit_qps"`
-	RateLimitBurst        int      `json:"rate_limit_burst"`
-	LoadBalancer          string   `json:"load_balancer"` // round-robin, consistent-hash
-	EnableCors            bool     `json:"enable_cors"`
-	APIKeys               []string `json:"api_keys"`
-	LogLevel              string   `json:"log_level"` // error, debug, info, none
+	ConfigVersion  int64    `json:"config_version"`
+	ServiceName    string   `json:"service_name"`
+	HTTPPort       string   `json:"http_port"`
+	GRPCPort       string   `json:"grpc_port"`
+	RedisAddrs     string   `json:"redis_addrs"`
+	EtcdAddrs      string   `json:"etcd_addrs"`
+	MemcacheAddrs  string   `json:"memcache_addrs"`
+	CacheType      string   `json:"cache_type"` // redis, memory, etcd, memcache
+	CacheTTL       int      `json:"cache_ttl"`  // seconds
+	CacheKeyPrefix string   `json:"cache_key_prefix"`
+	RateLimitQPS   int      `json:"rate_limit_qps"`
+	RateLimitBurst int      `json:"rate_limit_burst"`
+	EnableCors     bool     `json:"enable_cors"`
+	APIKeys        []string `json:"api_keys"`
+	LogLevel       string   `json:"log_level"` // error, debug, info, none
+
+	EnableDynamicConfig            bool   `json:"enable_dynamic_config"`
+	EnableServiceDiscovery         bool   `json:"enable_service_discovery"`
+	ServiceDiscovery               string `json:"service_discovery"` // etcd, zookeeper, consul, nacos
+	ServiceDiscoveryAddrs          string `json:"service_discovery_addrs"`
+	ServiceDiscoveryTTL            int    `json:"service_discovery_ttl"`
+	ServiceDiscoveryKeepAlive      int    `json:"service_discovery_keep_alive"`
+	ServiceDiscoveryMaxRetries     int    `json:"service_discovery_max_retries"`
+	ServiceDiscoveryBaseRetryDelay int    `json:"service_discovery_base_retry_delay"`
+	ServiceDiscoveryUsername       string `json:"service_discovery_username"`
+	ServiceDiscoveryPassword       string `json:"service_discovery_password"`
+	ServiceDiscoveryTlsServerName  string `json:"service_discovery_tls_server_name"`
+	ServiceDiscoveryTlsAddress     string `json:"service_discovery_tls_address"`
+	ServiceDiscoveryTlsCertFile    string `json:"service_discovery_tls_cert_file"`
+	ServiceDiscoveryTlsKeyFile     string `json:"service_discovery_tls_key_file"`
+	ServiceDiscoveryTlsCaFile      string `json:"service_discovery_tls_ca_file"`
 }
 
 // DynamicConfig .
 type DynamicConfig struct {
-	Config      Config
-	mu          sync.RWMutex
-	hotCbsHooks map[string]HandleHotCallbackHookFnc
+	Config       Config
+	mu           sync.RWMutex
+	hotCbsHooks  map[string]HandleHotCallbackFunc
+	outputLogCbs helper.OutputLogCallback
 }
 
-type HandleHotCallbackHookFnc = func(*DynamicConfig)
+// HotCallbackType ..
+type HotCallbackType int
+
+const (
+	HotCallbackTypeLocalConfigFile HotCallbackType = 1
+	HotCallbackTypeRemoteConfig                    = 2
+)
+
+// HandleHotCallbackFunc ..
+type HandleHotCallbackFunc = func(*DynamicConfig, HotCallbackType)
 
 // NewDynamicConfig .
-func NewDynamicConfig(file string) (*DynamicConfig, error) {
-	cfg, err := Load(file)
-	if err != nil {
-		return nil, err
+func NewDynamicConfig(file string, isWatchFile bool) (*DynamicConfig, error) {
+	cfg := DefaultConfig()
+	var err error
+	if file != "" {
+		cfg, err = Load(file)
+		if err != nil {
+			return nil, err
+		}
 	}
-	dc := &DynamicConfig{Config: cfg, hotCbsHooks: make(map[string]HandleHotCallbackHookFnc)}
-	go dc.watchFile(file)
+
+	dc := &DynamicConfig{Config: cfg, hotCbsHooks: make(map[string]HandleHotCallbackFunc)}
+
+	if isWatchFile {
+		go dc.watchFile(file)
+	}
+
 	return dc, nil
+}
+
+// DefaultDynamicConfig .
+func DefaultDynamicConfig() *DynamicConfig {
+	cfg := DefaultConfig()
+	return &DynamicConfig{Config: cfg, hotCbsHooks: make(map[string]HandleHotCallbackFunc)}
+}
+
+// SetOutputLogCallback Set the log out hook function
+func (dc *DynamicConfig) SetOutputLogCallback(outputLogCbs helper.OutputLogCallback) {
+	dc.outputLogCbs = outputLogCbs
+}
+
+// outLog ..
+func (dc *DynamicConfig) outLog(logType helper.OutputLogType, message string) {
+	if dc.outputLogCbs != nil {
+		dc.outputLogCbs(logType, message)
+	}
 }
 
 // Get retrieves the current configuration
@@ -60,6 +111,33 @@ func (dc *DynamicConfig) Get() Config {
 	dc.mu.RLock()
 	defer dc.mu.RUnlock()
 	return dc.Config
+}
+
+// MarshalConfig ..
+func (dc *DynamicConfig) MarshalConfig() (string, error) {
+	dc.mu.RLock()
+	cByte, err := json.Marshal(dc.Config)
+	if err != nil {
+		return "", err
+	}
+	dc.mu.RUnlock()
+
+	return string(cByte), nil
+}
+
+// UnMarshalConfig ..
+func (dc *DynamicConfig) UnMarshalConfig(str string) error {
+	var config Config
+	err := json.Unmarshal([]byte(str), &config)
+	if err != nil {
+		return err
+	}
+
+	dc.mu.Lock()
+	dc.Config = config
+	dc.mu.Unlock()
+
+	return nil
 }
 
 // Update updates the configuration
@@ -73,47 +151,76 @@ func (dc *DynamicConfig) Update(cfg Config) error {
 	return nil
 }
 
-// RegisterHotCallbackHook callback when updating configuration
-func (dc *DynamicConfig) RegisterHotCallbackHook(key string, callback HandleHotCallbackHookFnc) {
+// RegisterHotCallback callback when updating configuration
+func (dc *DynamicConfig) RegisterHotCallback(key string, callback HandleHotCallbackFunc) {
 	if _, ok := dc.hotCbsHooks[key]; !ok {
 		dc.hotCbsHooks[key] = callback
 	}
 }
 
-// UnRegisterHotCallbackHook callback when updating configuration
-func (dc *DynamicConfig) UnRegisterHotCallbackHook(key string) {
+// UnRegisterHotCallback callback when updating configuration
+func (dc *DynamicConfig) UnRegisterHotCallback(key string) {
 	if _, ok := dc.hotCbsHooks[key]; !ok {
 		delete(dc.hotCbsHooks, key)
 	}
 }
 
-// HandleHotCallbackHook .
-func (dc *DynamicConfig) HandleHotCallbackHook() {
+// HandleHotCallback .
+func (dc *DynamicConfig) HandleHotCallback(hotType HotCallbackType) {
 	for _, fnc := range dc.hotCbsHooks {
 		if fnc != nil {
-			fnc(dc)
+			fnc(dc, hotType)
 		}
 	}
+}
+
+// HotUpdate ..
+func (dc *DynamicConfig) HotUpdate(cfg Config) error {
+	if err := Validate(cfg); err != nil {
+		return err
+	}
+	dc.mu.Lock()
+	defer dc.mu.Unlock()
+
+	// Update config fields
+	dc.Config.ConfigVersion = cfg.ConfigVersion
+	dc.Config.APIKeys = cfg.APIKeys
+	dc.Config.LogLevel = cfg.LogLevel
+	dc.Config.RedisAddrs = cfg.RedisAddrs
+	dc.Config.EtcdAddrs = cfg.EtcdAddrs
+	dc.Config.MemcacheAddrs = cfg.MemcacheAddrs
+	dc.Config.CacheType = cfg.CacheType
+	dc.Config.CacheTTL = cfg.CacheTTL
+	dc.Config.CacheKeyPrefix = cfg.CacheKeyPrefix
+
+	if cfg.RateLimitQPS > 0 {
+		dc.Config.RateLimitQPS = cfg.RateLimitQPS
+	}
+	if cfg.RateLimitBurst > 0 {
+		dc.Config.RateLimitBurst = cfg.RateLimitBurst
+	}
+
+	return nil
 }
 
 // watchFile monitors the Config file for changes
 func (dc *DynamicConfig) watchFile(file string) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to create watcher: %v\n", err)
+		dc.outLog(helper.OutputLogTypeError, fmt.Sprintf("[Config] Failed to create watcher, err: %v", err))
 		return
 	}
 	defer watcher.Close()
 
 	absPath, err := filepath.Abs(file)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to get absolute path: %v\n", err)
+		dc.outLog(helper.OutputLogTypeError, fmt.Sprintf("[Config] Failed to get absolute path, err: %v", err))
 		return
 	}
 	dir := filepath.Dir(absPath)
 
 	if err := watcher.Add(dir); err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to watch directory: %v\n", err)
+		dc.outLog(helper.OutputLogTypeError, fmt.Sprintf("[Config] Failed to watch directory, err: %v", err))
 		return
 	}
 
@@ -126,22 +233,22 @@ func (dc *DynamicConfig) watchFile(file string) {
 			if event.Name == absPath && (event.Op&fsnotify.Write == fsnotify.Write) {
 				cfg, err := Load(file)
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "Failed to reload Config: %v\n", err)
+					dc.outLog(helper.OutputLogTypeError, fmt.Sprintf("[Config] Failed to reload Config, err: %v", err))
 					continue
 				}
-				if err := dc.Update(cfg); err != nil {
-					fmt.Fprintf(os.Stderr, "Failed to update Config: %v\n", err)
+				if err = dc.HotUpdate(cfg); err != nil {
+					dc.outLog(helper.OutputLogTypeError, fmt.Sprintf("[Config] Failed to update Config, err: %v", err))
 					continue
 				}
 
-				dc.HandleHotCallbackHook()
-				fmt.Printf("Configuration reloaded successfully\n")
+				dc.HandleHotCallback(HotCallbackTypeLocalConfigFile)
+				dc.outLog(helper.OutputLogTypeInfo, "[Config] Configuration reloaded successfully")
 			}
 		case err, ok := <-watcher.Errors:
 			if !ok {
 				return
 			}
-			fmt.Fprintf(os.Stderr, "Watcher error: %v\n", err)
+			dc.outLog(helper.OutputLogTypeError, fmt.Sprintf("[Config] Failed to watcher, err: %v", err))
 		}
 	}
 }
@@ -196,9 +303,6 @@ func Validate(config Config) error {
 	if config.CacheTTL <= 0 {
 		return fmt.Errorf("cache_ttl must be positive: %d", config.CacheTTL)
 	}
-	if config.CacheCleanupInt <= 0 && config.CacheType == "memory" {
-		return fmt.Errorf("cache_cleanup_interval must be positive for memory cache: %d", config.CacheCleanupInt)
-	}
 
 	validDiscoveryTypes := map[string]bool{
 		"etcd":      true,
@@ -227,14 +331,6 @@ func Validate(config Config) error {
 		if key == "" {
 			return fmt.Errorf("api_keys contain empty key")
 		}
-	}
-
-	validBalancerTypes := map[string]bool{
-		"round-robin":     true,
-		"consistent-hash": true,
-	}
-	if config.LoadBalancer != "" && !validBalancerTypes[config.LoadBalancer] {
-		return fmt.Errorf("invalid load_balancer: %s, must be round-robin or consistent-hash", config.LoadBalancer)
 	}
 
 	return nil
@@ -281,9 +377,6 @@ func MergeWithFlags(config Config, flags map[string]interface{}) Config {
 	if v, ok := flags["cache-ttl"].(int); ok && v != 0 {
 		config.CacheTTL = v
 	}
-	if v, ok := flags["cache-cleanup-interval"].(int); ok && v != 0 {
-		config.CacheCleanupInt = v
-	}
 	if v, ok := flags["cache-key-prefix"].(string); ok && v != "" {
 		config.CacheKeyPrefix = v
 	}
@@ -293,14 +386,44 @@ func MergeWithFlags(config Config, flags map[string]interface{}) Config {
 	if v, ok := flags["service-discovery-addrs"].(string); ok && v != "" {
 		config.ServiceDiscoveryAddrs = v
 	}
+	if v, ok := flags["service-discovery-ttl"].(int); ok && v != 0 {
+		config.ServiceDiscoveryTTL = v
+	}
+	if v, ok := flags["service-discovery-keep-alive"].(int); ok && v != 0 {
+		config.ServiceDiscoveryKeepAlive = v
+	}
+	if v, ok := flags["service-discovery-max-retries"].(int); ok && v != 0 {
+		config.ServiceDiscoveryMaxRetries = v
+	}
+	if v, ok := flags["service-discovery-base-retry-delay"].(int); ok && v != 0 {
+		config.ServiceDiscoveryBaseRetryDelay = v
+	}
+	if v, ok := flags["service-discovery-username"].(string); ok && v != "" {
+		config.ServiceDiscoveryUsername = v
+	}
+	if v, ok := flags["service-discovery-password"].(string); ok && v != "" {
+		config.ServiceDiscoveryPassword = v
+	}
+	if v, ok := flags["service-discovery-tls-server-name"].(string); ok && v != "" {
+		config.ServiceDiscoveryTlsServerName = v
+	}
+	if v, ok := flags["service-discovery-tls-address"].(string); ok && v != "" {
+		config.ServiceDiscoveryTlsAddress = v
+	}
+	if v, ok := flags["service-discovery-tls-cert-file"].(string); ok && v != "" {
+		config.ServiceDiscoveryTlsCertFile = v
+	}
+	if v, ok := flags["service-discovery-tls-key-file"].(string); ok && v != "" {
+		config.ServiceDiscoveryTlsKeyFile = v
+	}
+	if v, ok := flags["service-discovery-tls-ca-file"].(string); ok && v != "" {
+		config.ServiceDiscoveryTlsCaFile = v
+	}
 	if v, ok := flags["rate-limit-qps"].(int); ok && v != 0 {
 		config.RateLimitQPS = v
 	}
 	if v, ok := flags["rate-limit-burst"].(int); ok && v != 0 {
 		config.RateLimitBurst = v
-	}
-	if v, ok := flags["load-balancer"].(string); ok && v != "" {
-		config.LoadBalancer = v
 	}
 	if v, ok := flags["api-keys"].(string); ok && v != "" {
 		config.APIKeys = strings.Split(v, ",")
@@ -308,28 +431,37 @@ func MergeWithFlags(config Config, flags map[string]interface{}) Config {
 	if v, ok := flags["log-level"].(string); ok && v != "" {
 		config.LogLevel = v
 	}
+	if v, ok := flags["enable-dynamic-config"].(bool); ok && !config.EnableDynamicConfig {
+		config.EnableDynamicConfig = v
+	}
+	if v, ok := flags["enable-service-discovery"].(bool); ok && !config.EnableServiceDiscovery {
+		config.EnableServiceDiscovery = v
+	}
+	if v, ok := flags["enable-cors"].(bool); ok && !config.EnableCors {
+		config.EnableCors = v
+	}
 	return config
 }
 
 func DefaultConfig() Config {
 	return Config{
-		ServiceName:           "go-captcha-service",
-		HTTPPort:              "8080",
-		GRPCPort:              "50051",
-		RedisAddrs:            "localhost:6379",
-		EtcdAddrs:             "localhost:2379",
-		MemcacheAddrs:         "localhost:11211",
-		CacheType:             "memory",
-		CacheTTL:              60,
-		CacheCleanupInt:       10,
-		CacheKeyPrefix:        "GO_CAPTCHA_DATA",
-		ServiceDiscovery:      "",
-		ServiceDiscoveryAddrs: "localhost:2379",
-		RateLimitQPS:          1000,
-		RateLimitBurst:        1000,
-		LoadBalancer:          "round-robin",
-		EnableCors:            false,
-		APIKeys:               []string{"my-secret-key-123"},
-		LogLevel:              "info",
+		ServiceName:            "go-captcha-service",
+		HTTPPort:               "8080",
+		GRPCPort:               "50051",
+		RedisAddrs:             "localhost:6379",
+		EtcdAddrs:              "localhost:2379",
+		MemcacheAddrs:          "localhost:11211",
+		CacheType:              "memory",
+		CacheTTL:               60,
+		CacheKeyPrefix:         "GO_CAPTCHA_DATA:",
+		EnableDynamicConfig:    false,
+		EnableServiceDiscovery: false,
+		ServiceDiscovery:       "",
+		ServiceDiscoveryAddrs:  "localhost:2379",
+		RateLimitQPS:           1000,
+		RateLimitBurst:         1000,
+		EnableCors:             false,
+		APIKeys:                []string{"my-secret-key-123"},
+		LogLevel:               "info",
 	}
 }

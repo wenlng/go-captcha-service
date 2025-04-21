@@ -30,11 +30,12 @@ func TestCacheServer(t *testing.T) {
 
 	dc := &config.DynamicConfig{Config: config.DefaultConfig()}
 	cnf := dc.Get()
+	captDCfg := &config2.DynamicCaptchaConfig{Config: config2.DefaultConfig()}
 
 	logger, err := zap.NewProduction()
 	assert.NoError(t, err)
 
-	captcha, err := gocaptcha.Setup()
+	captcha, err := gocaptcha.Setup(captDCfg)
 	assert.NoError(t, err)
 
 	svcCtx := &common.SvcContext{

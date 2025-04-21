@@ -12,7 +12,6 @@ import (
 
 	"github.com/alicebob/miniredis/v2"
 	"github.com/stretchr/testify/assert"
-	"github.com/wenlng/go-captcha-service/internal/common"
 	"github.com/wenlng/go-captcha-service/internal/config"
 	"github.com/wenlng/go-captcha-service/internal/middleware"
 	"github.com/wenlng/go-captcha-service/internal/pkg/gocaptcha"
@@ -40,7 +39,7 @@ func TestHTTPHandlers(t *testing.T) {
 	captcha, err := gocaptcha.Setup()
 	assert.NoError(t, err)
 
-	svcCtx := &common.SvcContext{
+	svcCtx := &base.SvcContext{
 		Cache:   cacheClient,
 		Config:  &cnf,
 		Logger:  logger,

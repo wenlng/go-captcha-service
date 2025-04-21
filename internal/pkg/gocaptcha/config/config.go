@@ -1,3 +1,9 @@
+/**
+ * @Author Awen
+ * @Date 2025/04/04
+ * @Email wengaolng@gmail.com
+ **/
+
 package config
 
 import (
@@ -23,31 +29,69 @@ type BuilderConfig struct {
 
 // CaptchaConfig defines the configuration structure for the gocaptcha
 type CaptchaConfig struct {
-	Resources ResourceConfig `json:"resources"`
-	Builder   BuilderConfig  `json:"builder"`
+	ConfigVersion int64          `json:"config_version"`
+	Resources     ResourceConfig `json:"resources"`
+	Builder       BuilderConfig  `json:"builder"`
 }
 
 // DynamicCaptchaConfig .
 type DynamicCaptchaConfig struct {
 	Config      CaptchaConfig
 	mu          sync.RWMutex
-	hotCbsHooks map[string]HandleHotCallbackHookFnc
+	hotCbsHooks map[string]HandleHotCallbackFnc
+
+	outputLogCbs helper.OutputLogCallback
 }
 
-type HandleHotCallbackHookFnc = func(*DynamicCaptchaConfig)
+type HotCallbackType int
+
+const (
+	HotCallbackTypeLocalConfigFile HotCallbackType = 1
+	HotCallbackTypeRemoteConfig                    = 2
+)
+
+type HandleHotCallbackFnc = func(*DynamicCaptchaConfig, HotCallbackType)
 
 // NewDynamicConfig .
-func NewDynamicConfig(file string) (*DynamicCaptchaConfig, error) {
-	cfg, err := Load(file)
-	if err != nil {
-		return nil, err
+func NewDynamicConfig(file string, hasWatchFile bool) (*DynamicCaptchaConfig, error) {
+	cfg := DefaultConfig()
+	var err error
+
+	if file != "" {
+		cfg, err = Load(file)
+		if err != nil {
+			return nil, err
+		}
 	}
-	dc := &DynamicCaptchaConfig{Config: cfg, hotCbsHooks: make(map[string]HandleHotCallbackHookFnc)}
-	go dc.watchFile(file)
+
+	dc := &DynamicCaptchaConfig{Config: cfg, hotCbsHooks: make(map[string]HandleHotCallbackFnc)}
+
+	if hasWatchFile {
+		go dc.watchFile(file)
+	}
+
 	return dc, nil
 }
 
-// Get retrieves the current configuration
+// DefaultDynamicConfig .
+func DefaultDynamicConfig() *DynamicCaptchaConfig {
+	cfg := DefaultConfig()
+	return &DynamicCaptchaConfig{Config: cfg, hotCbsHooks: make(map[string]HandleHotCallbackFnc)}
+}
+
+// SetOutputLogCallback Set the log out hook function
+func (dc *DynamicCaptchaConfig) SetOutputLogCallback(outputLogCbs helper.OutputLogCallback) {
+	dc.outputLogCbs = outputLogCbs
+}
+
+// outLog ..
+func (dc *DynamicCaptchaConfig) outLog(logType helper.OutputLogType, message string) {
+	if dc.outputLogCbs != nil {
+		dc.outputLogCbs(logType, message)
+	}
+}
+
+// Get ..
 func (dc *DynamicCaptchaConfig) Get() CaptchaConfig {
 	dc.mu.RLock()
 	defer dc.mu.RUnlock()
@@ -65,25 +109,52 @@ func (dc *DynamicCaptchaConfig) Update(cfg CaptchaConfig) error {
 	return nil
 }
 
-// RegisterHotCallbackHook callback when updating configuration
-func (dc *DynamicCaptchaConfig) RegisterHotCallbackHook(key string, callback HandleHotCallbackHookFnc) {
+// MarshalConfig ..
+func (dc *DynamicCaptchaConfig) MarshalConfig() (string, error) {
+	dc.mu.RLock()
+	cByte, err := json.Marshal(dc.Config)
+	if err != nil {
+		return "", err
+	}
+	dc.mu.RUnlock()
+
+	return string(cByte), nil
+}
+
+// UnMarshalConfig ..
+func (dc *DynamicCaptchaConfig) UnMarshalConfig(str string) error {
+	var config CaptchaConfig
+	err := json.Unmarshal([]byte(str), &config)
+	if err != nil {
+		return err
+	}
+
+	dc.mu.Lock()
+	dc.Config = config
+	dc.mu.Unlock()
+
+	return nil
+}
+
+// RegisterHotCallback callback when updating configuration
+func (dc *DynamicCaptchaConfig) RegisterHotCallback(key string, callback HandleHotCallbackFnc) {
 	if _, ok := dc.hotCbsHooks[key]; !ok {
 		dc.hotCbsHooks[key] = callback
 	}
 }
 
-// UnRegisterHotCallbackHook callback when updating configuration
-func (dc *DynamicCaptchaConfig) UnRegisterHotCallbackHook(key string) {
+// UnRegisterHotCallback callback when updating configuration
+func (dc *DynamicCaptchaConfig) UnRegisterHotCallback(key string) {
 	if _, ok := dc.hotCbsHooks[key]; !ok {
 		delete(dc.hotCbsHooks, key)
 	}
 }
 
-// HandleHotCallbackHook .
-func (dc *DynamicCaptchaConfig) HandleHotCallbackHook() {
+// HandleHotCallback .
+func (dc *DynamicCaptchaConfig) HandleHotCallback(hostType HotCallbackType) {
 	for _, fnc := range dc.hotCbsHooks {
 		if fnc != nil {
-			fnc(dc)
+			fnc(dc, hostType)
 		}
 	}
 }
@@ -92,20 +163,20 @@ func (dc *DynamicCaptchaConfig) HandleHotCallbackHook() {
 func (dc *DynamicCaptchaConfig) watchFile(file string) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to create watcher: %v\n", err)
+		dc.outLog(helper.OutputLogTypeError, fmt.Sprintf("[CaptchaConfig] Failed to create watcher, err: %v", err))
 		return
 	}
 	defer watcher.Close()
 
 	absPath, err := filepath.Abs(file)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to get absolute path: %v\n", err)
+		dc.outLog(helper.OutputLogTypeError, fmt.Sprintf("[CaptchaConfig] Failed to get absolute path, err: %v", err))
 		return
 	}
 	dir := filepath.Dir(absPath)
 
 	if err := watcher.Add(dir); err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to watch directory: %v\n", err)
+		dc.outLog(helper.OutputLogTypeError, fmt.Sprintf("[CaptchaConfig] Failed to watch directory, err: %v", err))
 		return
 	}
 
@@ -118,24 +189,23 @@ func (dc *DynamicCaptchaConfig) watchFile(file string) {
 			if event.Name == absPath && (event.Op&fsnotify.Write == fsnotify.Write) {
 				cfg, err := Load(file)
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "Failed to reload CaptchaConfig: %v\n", err)
+					dc.outLog(helper.OutputLogTypeError, fmt.Sprintf("[CaptchaConfig]Failed to reload Config, err: %v", err))
 					continue
 				}
-				if err := dc.Update(cfg); err != nil {
-					fmt.Fprintf(os.Stderr, "Failed to update CaptchaConfig: %v\n", err)
+				if err = dc.Update(cfg); err != nil {
+					dc.outLog(helper.OutputLogTypeError, fmt.Sprintf("[CaptchaConfig] Failed to update Config, err: %v", err))
 					continue
 				}
 
 				// Instance update gocaptcha
-				dc.HandleHotCallbackHook()
-
-				fmt.Printf("GoCaptcha Configuration reloaded successfully\n")
+				dc.HandleHotCallback(HotCallbackTypeLocalConfigFile)
+				dc.outLog(helper.OutputLogTypeInfo, "[CaptchaConfig] Configuration reloaded successfully")
 			}
 		case err, ok := <-watcher.Errors:
 			if !ok {
 				return
 			}
-			fmt.Fprintf(os.Stderr, "Watcher error: %v\n", err)
+			dc.outLog(helper.OutputLogTypeError, fmt.Sprintf("[CaptchaConfig] Failed to watcher, err: %v", err))
 		}
 	}
 }
@@ -143,12 +213,11 @@ func (dc *DynamicCaptchaConfig) watchFile(file string) {
 // HotUpdate hot update configuration
 func (dc *DynamicCaptchaConfig) HotUpdate(cfg CaptchaConfig) error {
 	if err := dc.Update(cfg); err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to update CaptchaConfig: %v\n", err)
 		return err
 	}
 
 	// Instance update gocaptcha
-	dc.HandleHotCallbackHook()
+	dc.HandleHotCallback(HotCallbackTypeLocalConfigFile)
 	return nil
 }
 
@@ -224,7 +293,13 @@ func isValidFileExist(filePaths []string) error {
 func DefaultConfig() CaptchaConfig {
 	return CaptchaConfig{
 		Resources: ResourceConfig{
-			Char:        ResourceChar{},
+			Version: "0.0.1",
+			Char: ResourceChar{
+				Languages: map[string][]string{
+					"chinese": make([]string, 0),
+					"english": make([]string, 0),
+				},
+			},
 			Font:        ResourceFileConfig{},
 			ShapeImage:  ResourceFileConfig{},
 			MasterImage: ResourceFileConfig{},
@@ -233,40 +308,76 @@ func DefaultConfig() CaptchaConfig {
 		},
 		Builder: BuilderConfig{
 			ClickConfigMaps: map[string]ClickConfig{
-				"click_default_ch": {
+				"click-default-ch": {
+					Version:  "0.0.1",
 					Language: "chinese",
 					Master:   ClickMasterOption{},
 					Thumb:    ClickThumbOption{},
 				},
-				"click_dark_ch": {
+				"click-dark-ch": {
+					Version:  "0.0.1",
 					Language: "chinese",
 					Master:   ClickMasterOption{},
-					Thumb:    ClickThumbOption{},
+					Thumb: ClickThumbOption{
+						RangeTextColors: []string{
+							"#4a85fb",
+							"#d93ffb",
+							"#56be01",
+							"#ee2b2b",
+							"#cd6904",
+							"#b49b03",
+							"#01ad90",
+						},
+					},
 				},
-				"click_default_en": {
+				"click-default-en": {
+					Version:  "0.0.1",
 					Language: "english",
 					Master:   ClickMasterOption{},
 					Thumb:    ClickThumbOption{},
 				},
-				"click_dark_en": {
+				"click-dark-en": {
+					Version:  "0.0.1",
 					Language: "english",
 					Master:   ClickMasterOption{},
-					Thumb:    ClickThumbOption{},
+					Thumb: ClickThumbOption{
+						RangeTextColors: []string{
+							"#4a85fb",
+							"#d93ffb",
+							"#56be01",
+							"#ee2b2b",
+							"#cd6904",
+							"#b49b03",
+							"#01ad90",
+						},
+					},
 				},
-				"click_shape_light_default": {},
-				"click_shape_dark_default":  {},
+				"click-shape-light-default": {
+					Version: "0.0.1",
+				},
+				"click-shape-dark-default": {
+					Version: "0.0.1",
+				},
 			},
 			ClickShapeConfigMaps: map[string]ClickConfig{
-				"click_shape_default": {},
+				"click-shape-default": {
+					Version: "0.0.1",
+				},
 			},
 			SlideConfigMaps: map[string]SlideConfig{
-				"slide_default": {},
+				"slide-default": {
+					Version: "0.0.1",
+				},
 			},
 			DragConfigMaps: map[string]SlideConfig{
-				"drag_default": {},
+				"drag-default": {
+					Version: "0.0.1",
+				},
 			},
 			RotateConfigMaps: map[string]RotateConfig{
-				"rotate_default": {},
+				"rotate-default": {
+					Version: "0.0.1",
+				},
 			},
 		},
 	}

@@ -1,3 +1,9 @@
+/**
+ * @Author Awen
+ * @Date 2025/04/04
+ * @Email wengaolng@gmail.com
+ **/
+
 package cache
 
 import (
@@ -17,7 +23,7 @@ type EtcdClient struct {
 	ttl    time.Duration
 }
 
-// NewEtcdClient creates a new etcd client
+// NewEtcdClient ..
 func NewEtcdClient(addrs, prefix string, ttl time.Duration) (*EtcdClient, error) {
 	client, err := clientv3.New(clientv3.Config{
 		Endpoints:   []string{addrs},
@@ -68,7 +74,9 @@ func (c *EtcdClient) SetCache(ctx context.Context, key, value string) error {
 	return nil
 }
 
+// DeleteCache ..
 func (c *EtcdClient) DeleteCache(ctx context.Context, key string) error {
+	key = c.prefix + key
 	_, err := c.client.Delete(ctx, key)
 	if err != nil {
 		return fmt.Errorf("etcd delete error: %v", err)
@@ -76,7 +84,7 @@ func (c *EtcdClient) DeleteCache(ctx context.Context, key string) error {
 	return nil
 }
 
-// Close closes the etcd client
+// Close ..
 func (c *EtcdClient) Close() error {
 	return c.client.Close()
 }

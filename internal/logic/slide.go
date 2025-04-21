@@ -1,3 +1,9 @@
+/**
+ * @Author Awen
+ * @Date 2025/04/04
+ * @Email wengaolng@gmail.com
+ **/
+
 package logic
 
 import (
@@ -22,7 +28,7 @@ import (
 type SlideCaptLogic struct {
 	svcCtx *common.SvcContext
 
-	cache      cache.Cache
+	cacheMgr   *cache.CacheManager
 	dynamicCfg *config.DynamicConfig
 	logger     *zap.Logger
 	captcha    *gocaptcha.GoCaptcha
@@ -32,7 +38,7 @@ type SlideCaptLogic struct {
 func NewSlideCaptLogic(svcCtx *common.SvcContext) *SlideCaptLogic {
 	return &SlideCaptLogic{
 		svcCtx:     svcCtx,
-		cache:      svcCtx.Cache,
+		cacheMgr:   svcCtx.CacheMgr,
 		dynamicCfg: svcCtx.DynamicConfig,
 		logger:     svcCtx.Logger,
 		captcha:    svcCtx.Captcha,
@@ -48,7 +54,8 @@ func (cl *SlideCaptLogic) GetData(ctx context.Context, id string) (res *adapt.Ca
 	}
 
 	var capt *gocaptcha.SlideCaptInstance
-	switch cl.svcCtx.Captcha.GetCaptTypeWithKey(id) {
+	ttype := cl.svcCtx.Captcha.GetCaptTypeWithKey(id)
+	switch ttype {
 	case consts.GoCaptchaTypeSlide:
 		capt = cl.svcCtx.Captcha.GetSlideInstanceWithKey(id)
 		break
@@ -82,6 +89,7 @@ func (cl *SlideCaptLogic) GetData(ctx context.Context, id string) (res *adapt.Ca
 
 	cacheData := &cache.CaptCacheData{
 		Data:   data,
+		Type:   ttype,
 		Status: 0,
 	}
 	cacheDataByte, err := json.Marshal(cacheData)
@@ -94,16 +102,16 @@ func (cl *SlideCaptLogic) GetData(ctx context.Context, id string) (res *adapt.Ca
 		return nil, fmt.Errorf("failed to generate uuid: %v", err)
 	}
 
-	err = cl.cache.SetCache(ctx, key, string(cacheDataByte))
+	err = cl.cacheMgr.GetCache().SetCache(ctx, key, string(cacheDataByte))
 	if err != nil {
 		return res, fmt.Errorf("failed to write cache:: %v", err)
 	}
 
 	opts := capt.Instance.GetOptions()
-	res.MasterImageWidth = int32(opts.GetImageSize().Width)
-	res.MasterImageHeight = int32(opts.GetImageSize().Height)
-	res.ThumbImageWidth = int32(data.Width)
-	res.ThumbImageHeight = int32(data.Height)
+	res.MasterWidth = int32(opts.GetImageSize().Width)
+	res.MasterHeight = int32(opts.GetImageSize().Height)
+	res.ThumbWidth = int32(data.Width)
+	res.ThumbHeight = int32(data.Height)
 	res.DisplayX = int32(data.TileX)
 	res.DisplayY = int32(data.TileY)
 	res.CaptchaKey = key
@@ -116,7 +124,7 @@ func (cl *SlideCaptLogic) CheckData(ctx context.Context, key string, dots string
 		return false, fmt.Errorf("invalid key")
 	}
 
-	cacheData, err := cl.cache.GetCache(ctx, key)
+	cacheData, err := cl.cacheMgr.GetCache().GetCache(ctx, key)
 	if err != nil {
 		return false, fmt.Errorf("failed to get cache: %v", err)
 	}
@@ -127,15 +135,20 @@ func (cl *SlideCaptLogic) CheckData(ctx context.Context, key string, dots string
 
 	src := strings.Split(dots, ",")
 
-	var captData *cache.CaptCacheData
-	err = json.Unmarshal([]byte(cacheData), &captData)
+	var cacheCaptData *cache.CaptCacheData
+	err = json.Unmarshal([]byte(cacheData), &cacheCaptData)
 	if err != nil {
 		return false, fmt.Errorf("failed to json unmarshal: %v", err)
 	}
 
-	dct, ok := captData.Data.(*slide.Block)
-	if !ok {
-		return false, fmt.Errorf("cache data invalid: %v", err)
+	var dct *slide.Block
+	captDataStr, err := json.Marshal(cacheCaptData.Data)
+	if err != nil {
+		return false, fmt.Errorf("failed to json marshal: %v", err)
+	}
+	err = json.Unmarshal(captDataStr, &dct)
+	if err != nil {
+		return false, fmt.Errorf("failed to json unmarshal: %v", err)
 	}
 
 	ret := false
@@ -146,13 +159,13 @@ func (cl *SlideCaptLogic) CheckData(ctx context.Context, key string, dots string
 	}
 
 	if ret {
-		captData.Status = 1
-		cacheDataByte, err := json.Marshal(captData)
+		cacheCaptData.Status = 1
+		cacheDataByte, err := json.Marshal(cacheCaptData)
 		if err != nil {
 			return ret, fmt.Errorf("failed to json marshal: %v", err)
 		}
 
-		err = cl.cache.SetCache(ctx, key, string(cacheDataByte))
+		err = cl.cacheMgr.GetCache().SetCache(ctx, key, string(cacheDataByte))
 		if err != nil {
 			return ret, fmt.Errorf("failed to update cache:: %v", err)
 		}

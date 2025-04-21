@@ -14,6 +14,7 @@ import (
 	"github.com/wenlng/go-captcha-service/internal/common"
 	"github.com/wenlng/go-captcha-service/internal/config"
 	"github.com/wenlng/go-captcha-service/internal/pkg/gocaptcha"
+	config2 "github.com/wenlng/go-captcha-service/internal/pkg/gocaptcha/config"
 	"github.com/wenlng/go-captcha/v2/click"
 	"go.uber.org/zap"
 )
@@ -29,37 +30,37 @@ func TestCacheLogic(t *testing.T) {
 	defer cacheClient.Close()
 
 	dc := &config.DynamicConfig{Config: config.DefaultConfig()}
-	cnf := dc.Get()
+	cdc := &config2.DynamicCaptchaConfig{Config: config2.DefaultConfig()}
 
 	logger, err := zap.NewProduction()
 	assert.NoError(t, err)
 
-	captcha, err := gocaptcha.Setup()
+	captcha, err := gocaptcha.Setup(cdc)
 	assert.NoError(t, err)
 
 	svcCtx := &common.SvcContext{
-		Cache:   cacheClient,
-		Config:  &cnf,
-		Logger:  logger,
-		Captcha: captcha,
+		CacheMgr:      cacheClient,
+		DynamicConfig: dc,
+		Logger:        logger,
+		Captcha:       captcha,
 	}
 	logic := NewClickCaptLogic(svcCtx)
 
 	t.Run("GetData", func(t *testing.T) {
-		_, err := logic.GetData(context.Background(), 0, 1, 1)
+		_, err := logic.GetData(context.Background(), "dd")
 		assert.NoError(t, err)
 	})
 
 	t.Run("GetData_Miss", func(t *testing.T) {
-		_, err := logic.GetData(context.Background(), -1, 1, 1)
+		_, err := logic.GetData(context.Background(), "dd")
 		assert.Error(t, err)
 	})
 
 	t.Run("CheckData", func(t *testing.T) {
-		data, err := logic.GetData(context.Background(), 1, 1, 1)
+		data, err := logic.GetData(context.Background(), "dd")
 		assert.NoError(t, err)
 
-		cacheData, err := svcCtx.Cache.GetCache(context.Background(), data.CaptchaKey)
+		cacheData, err := svcCtx.CacheMgr.GetCache(context.Background(), data.CaptchaKey)
 		assert.NoError(t, err)
 
 		var dct map[int]*click.Dot
@@ -79,10 +80,10 @@ func TestCacheLogic(t *testing.T) {
 	})
 
 	t.Run("CheckData_MISS", func(t *testing.T) {
-		data, err := logic.GetData(context.Background(), 1, 1, 1)
+		data, err := logic.GetData(context.Background(), "dd")
 		assert.NoError(t, err)
 
-		cacheData, err := svcCtx.Cache.GetCache(context.Background(), data.CaptchaKey)
+		cacheData, err := svcCtx.CacheMgr.GetCache(context.Background(), data.CaptchaKey)
 		assert.NoError(t, err)
 
 		var dct map[int]*click.Dot

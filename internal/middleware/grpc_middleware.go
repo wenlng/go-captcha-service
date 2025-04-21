@@ -1,3 +1,9 @@
+/**
+ * @Author Awen
+ * @Date 2025/04/04
+ * @Email wengaolng@gmail.com
+ **/
+
 package middleware
 
 import (
@@ -28,16 +34,16 @@ func UnaryServerInterceptor(dc *config.DynamicConfig, logger *zap.Logger, breake
 
 		md, ok := metadata.FromIncomingContext(ctx)
 		if !ok {
-			logger.Warn("Missing metadata")
+			logger.Warn("[GrpcMiddleware] Missing metadata")
 			return nil, status.Error(codes.Unauthenticated, "missing API Key")
 		}
 		apiKeys := md.Get("x-api-key")
 		if len(apiKeys) == 0 {
-			logger.Warn("Missing API Key")
+			logger.Warn("[GrpcMiddleware] Missing API Key")
 			return nil, status.Error(codes.Unauthenticated, "missing API Key")
 		}
 		if _, exists := apiKeyMap[apiKeys[0]]; !exists {
-			logger.Warn("Invalid API Key", zap.String("key", apiKeys[0]))
+			logger.Warn("[GrpcMiddleware] Invalid API Key", zap.String("key", apiKeys[0]))
 			return nil, status.Error(codes.Unauthenticated, "invalid API Key")
 		}
 
@@ -49,16 +55,16 @@ func UnaryServerInterceptor(dc *config.DynamicConfig, logger *zap.Logger, breake
 			return nil, nil
 		})
 		if cbErr == gobreaker.ErrOpenState || cbErr == gobreaker.ErrTooManyRequests {
-			logger.Warn("gRPC circuit breaker tripped", zap.Error(cbErr))
+			logger.Warn("[GrpcMiddleware] gRPC circuit breaker tripped", zap.Error(cbErr))
 			return nil, status.Error(codes.Unavailable, "service unavailable")
 		}
 		if cbErr != nil {
-			logger.Error("gRPC circuit breaker error", zap.Error(cbErr))
+			logger.Error("[GrpcMiddleware] gRPC circuit breaker error", zap.Error(cbErr))
 			return nil, status.Error(codes.Internal, "internal server error")
 		}
 
 		// Log request
-		logger.Info("gRPC request",
+		logger.Info("[GrpcMiddleware] gRPC request",
 			zap.String("method", info.FullMethod),
 			zap.Duration("duration", time.Since(start)),
 			zap.Error(err),

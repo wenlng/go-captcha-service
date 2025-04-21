@@ -1,3 +1,9 @@
+/**
+ * @Author Awen
+ * @Date 2025/04/04
+ * @Email wengaolng@gmail.com
+ **/
+
 package gocaptcha
 
 import (
@@ -28,11 +34,11 @@ func genClickOptions(conf config.ClickConfig) ([]click.Option, error) {
 	options := make([]click.Option, 0)
 
 	// Master image
-	if conf.Master.ImageSize.Height != 0 && conf.Master.ImageSize.Width != 0 {
+	if conf.Master.ImageSize.Height > 0 && conf.Master.ImageSize.Width > 0 {
 		options = append(options, click.WithImageSize(conf.Master.ImageSize))
 	}
 
-	if conf.Master.RangeLength.Min >= 0 && conf.Master.RangeLength.Max >= 0 {
+	if conf.Master.RangeLength.Min >= 0 && conf.Master.RangeLength.Max > 0 {
 		options = append(options, click.WithRangeLen(conf.Master.RangeLength))
 	}
 
@@ -40,7 +46,7 @@ func genClickOptions(conf config.ClickConfig) ([]click.Option, error) {
 		options = append(options, click.WithRangeAnglePos(conf.Master.RangeAngles))
 	}
 
-	if conf.Master.RangeSize.Min >= 0 && conf.Master.RangeSize.Max >= 0 {
+	if conf.Master.RangeSize.Min >= 0 && conf.Master.RangeSize.Max > 0 {
 		options = append(options, click.WithRangeSize(conf.Master.RangeSize))
 	}
 
@@ -84,7 +90,7 @@ func genClickOptions(conf config.ClickConfig) ([]click.Option, error) {
 		options = append(options, click.WithDisabledRangeVerifyLen(conf.Thumb.DisabledRangeVerifyLength))
 	}
 
-	if conf.Thumb.RangeTextSize.Min != 0 && conf.Thumb.RangeTextSize.Max != 0 {
+	if conf.Thumb.RangeTextSize.Min > 0 && conf.Thumb.RangeTextSize.Max > 0 {
 		options = append(options, click.WithRangeThumbSize(conf.Thumb.RangeTextSize))
 	}
 
@@ -119,7 +125,7 @@ func genClickOptions(conf config.ClickConfig) ([]click.Option, error) {
 	return options, nil
 }
 
-// GetMixinAlphaChars 数字+字母组合(双组合)
+// GetMixinAlphaChars .
 func GetMixinAlphaChars() []string {
 	var ret = make([]string, 0)
 	letterArr := strings.Split("ABCDEFGHIJKLMNOPQRSTUVWXYZ", "")

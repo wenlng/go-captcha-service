@@ -48,12 +48,10 @@ func TestValidate(t *testing.T) {
 		RedisAddrs:            "localhost:6379",
 		CacheType:             "redis",
 		CacheTTL:              60,
-		CacheCleanupInt:       10,
 		ServiceDiscovery:      "etcd",
 		ServiceDiscoveryAddrs: "localhost:2379",
 		RateLimitQPS:          1000,
 		RateLimitBurst:        1000,
-		LoadBalancer:          "round-robin",
 		APIKeys:               []string{"key1"},
 	}
 	assert.NoError(t, Validate(config))
@@ -91,7 +89,7 @@ func TestDynamicConfig(t *testing.T) {
 	err = os.WriteFile(configPath, []byte(configContent), 0644)
 	assert.NoError(t, err)
 
-	dc, err := NewDynamicConfig(configPath)
+	dc, err := NewDynamicConfig(configPath, false)
 	assert.NoError(t, err)
 
 	cfg := dc.Get()

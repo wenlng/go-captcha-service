@@ -1,3 +1,9 @@
+/**
+ * @Author Awen
+ * @Date 2025/04/04
+ * @Email wengaolng@gmail.com
+ **/
+
 package logic
 
 import (
@@ -21,7 +27,7 @@ import (
 type ResourceLogic struct {
 	svcCtx *common.SvcContext
 
-	cache      cache.Cache
+	cacheMgr   *cache.CacheManager
 	dynamicCfg *config.DynamicConfig
 	logger     *zap.Logger
 	captcha    *gocaptcha.GoCaptcha
@@ -31,7 +37,7 @@ type ResourceLogic struct {
 func NewResourceLogic(svcCtx *common.SvcContext) *ResourceLogic {
 	return &ResourceLogic{
 		svcCtx:     svcCtx,
-		cache:      svcCtx.Cache,
+		cacheMgr:   svcCtx.CacheMgr,
 		dynamicCfg: svcCtx.DynamicConfig,
 		logger:     svcCtx.Logger,
 		captcha:    svcCtx.Captcha,

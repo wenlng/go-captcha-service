@@ -1,3 +1,9 @@
+/**
+ * @Author Awen
+ * @Date 2025/04/04
+ * @Email wengaolng@gmail.com
+ **/
+
 package gocaptcha
 
 import (
@@ -22,7 +28,7 @@ func genRotateOptions(conf config.RotateConfig) ([]rotate.Option, error) {
 	options := make([]rotate.Option, 0)
 
 	// Master image
-	if conf.Master.ImageSquareSize != 0 {
+	if conf.Master.ImageSquareSize > 0 {
 		options = append(options, rotate.WithImageSquareSize(conf.Master.ImageSquareSize))
 	}
 

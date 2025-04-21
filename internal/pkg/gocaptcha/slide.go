@@ -1,3 +1,9 @@
+/**
+ * @Author Awen
+ * @Date 2025/04/04
+ * @Email wengaolng@gmail.com
+ **/
+
 package gocaptcha
 
 import (
@@ -24,7 +30,7 @@ func genSlideOptions(conf config.SlideConfig) ([]slide.Option, error) {
 	options := make([]slide.Option, 0)
 
 	// Master image
-	if conf.Master.ImageSize.Height != 0 && conf.Master.ImageSize.Width != 0 {
+	if conf.Master.ImageSize.Height > 0 && conf.Master.ImageSize.Width > 0 {
 		options = append(options, slide.WithImageSize(conf.Master.ImageSize))
 	}
 
@@ -33,7 +39,7 @@ func genSlideOptions(conf config.SlideConfig) ([]slide.Option, error) {
 	}
 
 	// Thumb image
-	if conf.Thumb.RangeGraphSizes.Min != 0 && conf.Thumb.RangeGraphSizes.Max != 0 {
+	if conf.Thumb.RangeGraphSizes.Min >= 0 && conf.Thumb.RangeGraphSizes.Max > 0 {
 		options = append(options, slide.WithRangeGraphSize(conf.Thumb.RangeGraphSizes))
 	}
 

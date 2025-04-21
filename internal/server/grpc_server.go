@@ -1,3 +1,9 @@
+/**
+ * @Author Awen
+ * @Date 2025/04/04
+ * @Email wengaolng@gmail.com
+ **/
+
 package server
 
 import (
@@ -75,11 +81,23 @@ func (s *GrpcServer) GetData(ctx context.Context, req *proto.GetDataRequest) (*p
 	}
 
 	if err != nil || data == nil {
-		s.logger.Error("failed to get captcha data, err: ", zap.Error(err))
+		s.logger.Warn("[GrpcServer] Failed to get captcha data, err: ", zap.Error(err))
 		return &proto.GetDataResponse{Code: 0, Message: "captcha type not found"}, nil
 	}
 
 	resp.Id = req.GetId()
+
+	resp.CaptchaKey = data.CaptchaKey
+	resp.MasterImageBase64 = data.MasterImageBase64
+	resp.ThumbImageBase64 = data.ThumbImageBase64
+	resp.MasterWidth = data.MasterWidth
+	resp.MasterHeight = data.MasterHeight
+	resp.ThumbWidth = data.ThumbWidth
+	resp.ThumbHeight = data.ThumbHeight
+	resp.ThumbSize = data.ThumbSize
+	resp.DisplayX = data.DisplayX
+	resp.DisplayY = data.DisplayY
+
 	return resp, nil
 }
 
@@ -123,7 +141,7 @@ func (s *GrpcServer) CheckData(ctx context.Context, req *proto.CheckDataRequest)
 	}
 
 	if err != nil {
-		s.logger.Error("failed to check captcha data, err: ", zap.Error(err))
+		s.logger.Warn("[GrpcServer] Failed to check captcha data, err: ", zap.Error(err))
 		return &proto.CheckDataResponse{Code: 1, Message: "failed to check captcha data"}, nil
 	}
 
@@ -146,7 +164,7 @@ func (s *GrpcServer) CheckStatus(ctx context.Context, req *proto.StatusInfoReque
 
 	data, err := s.commonLogic.GetStatusInfo(ctx, req.GetCaptchaKey())
 	if err != nil {
-		s.logger.Error("failed to check status, err: ", zap.Error(err))
+		s.logger.Warn("[GrpcServer] Failed to check status, err: ", zap.Error(err))
 		return &proto.StatusInfoResponse{Code: 1}, nil
 	}
 
@@ -169,7 +187,7 @@ func (s *GrpcServer) GetStatusInfo(ctx context.Context, req *proto.StatusInfoReq
 
 	data, err := s.commonLogic.GetStatusInfo(ctx, req.GetCaptchaKey())
 	if err != nil {
-		s.logger.Error("failed to check status, err: ", zap.Error(err))
+		s.logger.Warn("[GrpcServer] Failed to check status, err: ", zap.Error(err))
 		return &proto.StatusInfoResponse{Code: 1}, nil
 	}
 
@@ -195,7 +213,7 @@ func (s *GrpcServer) DelStatusInfo(ctx context.Context, req *proto.StatusInfoReq
 
 	ret, err := s.commonLogic.DelStatusInfo(ctx, req.GetCaptchaKey())
 	if err != nil {
-		s.logger.Error("failed to delete status info, err: ", zap.Error(err))
+		s.logger.Warn("[GrpcServer] Failed to delete status info, err: ", zap.Error(err))
 		return &proto.StatusInfoResponse{Code: 1}, nil
 	}
 

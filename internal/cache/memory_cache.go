@@ -1,3 +1,9 @@
+/**
+ * @Author Awen
+ * @Date 2025/04/04
+ * @Email wengaolng@gmail.com
+ **/
+
 package cache
 
 import (
@@ -21,7 +27,7 @@ type cacheItem struct {
 	expiration int64
 }
 
-// NewMemoryCache creates a new memory cache
+// NewMemoryCache ..
 func NewMemoryCache(prefix string, ttl, cleanupInterval time.Duration) *MemoryCache {
 	cache := &MemoryCache{
 		items:    make(map[string]cacheItem),
@@ -78,20 +84,22 @@ func (c *MemoryCache) SetCache(ctx context.Context, key, value string) error {
 	return nil
 }
 
+// DeleteCache delete a value in memory cache
 func (c *MemoryCache) DeleteCache(ctx context.Context, key string) error {
+	key = c.prefix + key
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	delete(c.items, key)
 	return nil
 }
 
-// Close stops the memory cache
+// Close ..
 func (c *MemoryCache) Close() error {
 	c.Stop()
 	return nil
 }
 
-// Stop stops the memory cache cleanup routine
+// Stop ..
 func (c *MemoryCache) Stop() {
 	close(c.stop)
 }
