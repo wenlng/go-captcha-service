@@ -27,25 +27,23 @@
 <hr/>
 <br/>
 
-## 项目生态
+## 周边项目
 
-| 名称                                                                         | 描述                                                                                          |
-|----------------------------------------------------------------------------|---------------------------------------------------------------------------------------------|
-| [document](http://gocaptcha.wencodes.com)                                  | GoCaptcha 文档                                                                                |
-| [online demo](http://gocaptcha.wencodes.com/demo/)                         | GoCaptcha 在线演示                                                                              |
-| [go-captcha-example](https://github.com/wenlng/go-captcha-example)         | Golang + 前端 + APP实例                                                                         |
-| [go-captcha-assets](https://github.com/wenlng/go-captcha-assets)           | Golang 内嵌素材资源                                                                               |
-| [go-captcha](https://github.com/wenlng/go-captcha)                         | Golang 验证码                                                                                  |
-| [go-captcha-jslib](https://github.com/wenlng/go-captcha-jslib)             | Javascript 验证码                                                                              |
-| [go-captcha-vue](https://github.com/wenlng/go-captcha-vue)                 | Vue 验证码                                                                                     |
-| [go-captcha-react](https://github.com/wenlng/go-captcha-react)             | React 验证码                                                                                   |
-| [go-captcha-angular](https://github.com/wenlng/go-captcha-angular)         | Angular 验证码                                                                                 |
-| [go-captcha-svelte](https://github.com/wenlng/go-captcha-svelte)           | Svelte 验证码                                                                                  |
-| [go-captcha-solid](https://github.com/wenlng/go-captcha-solid)             | Solid 验证码                                                                                   |
-| [go-captcha-uni](https://github.com/wenlng/go-captcha-uni)                 | UniApp 验证码，兼容 Android、IOS、小程序、快应用等                                                          |
-| [go-captcha-service](https://github.com/wenlng/go-captcha-service)         | GoCaptcha 服务，支持二进制、Docker镜像等方式部署，<br/> 提供 HTTP/GRPC 方式访问接口，<br/>可用单机模式和分布式（服务发现、负载均衡、动态配置等） |
-| [go-captcha-service-sdk](https://github.com/wenlng/go-captcha-service-sdk) | GoCaptcha 服务SDK工具包，包含 HTTP/GRPC 请求服务接口，<br/>支持静态模式、服务发现、负载均衡                                |
-| ...                                                                        |                                                                                             |
+| 名称                                                                         | 描述                                                                                         |
+|----------------------------------------------------------------------------|--------------------------------------------------------------------------------------------|
+| [go-captcha](https://github.com/wenlng/go-captcha)                         | Golang 验证码基本库                                                                              |
+| [document](http://gocaptcha.wencodes.com)                                  | GoCaptcha 文档                                                                               |
+| [online demo](http://gocaptcha.wencodes.com/demo/)                         | GoCaptcha 在线演示                                                                             |
+| [go-captcha-service](https://github.com/wenlng/go-captcha-service)         | GoCaptcha 服务，提供 HTTP/GRPC 方式访问接口，<br/>支持单机模式和分布式（服务发现、负载均衡、动态配置等），<br/>可用二进制、Docker镜像等方式部署 |
+| [go-captcha-service-sdk](https://github.com/wenlng/go-captcha-service-sdk) | GoCaptcha 服务SDK工具包，包含 HTTP/GRPC 请求服务接口，<br/>支持静态模式、服务发现、负载均衡                               |
+| [go-captcha-jslib](https://github.com/wenlng/go-captcha-jslib)             | Javascript 验证码                                                                             |
+| [go-captcha-vue](https://github.com/wenlng/go-captcha-vue)                 | Vue 验证码                                                                                    |
+| [go-captcha-react](https://github.com/wenlng/go-captcha-react)             | React 验证码                                                                                  |
+| [go-captcha-angular](https://github.com/wenlng/go-captcha-angular)         | Angular 验证码                                                                                |
+| [go-captcha-svelte](https://github.com/wenlng/go-captcha-svelte)           | Svelte 验证码                                                                                 |
+| [go-captcha-solid](https://github.com/wenlng/go-captcha-solid)             | Solid 验证码                                                                                  |
+| [go-captcha-uni](https://github.com/wenlng/go-captcha-uni)                 | UniApp 验证码，兼容 APP、小程序、快应用等                                                                 |
+| ...                                                                        |                                                                                            |
 
 <br/>
 <br/>
@@ -90,14 +88,14 @@
     ./go-captcha-service-[xxx] -config config.json -gocaptcha-config gocaptcha.json
     ```
 
-3. 访问 HTTP 接口（如 `http://localhost:8080/api/v1/get-data?id=click-default-ch`）或 gRPC 接口（`localhost:50051`）。
+3. 访问 HTTP 接口（如 `http://localhost:8080/api/v1/public/get-data?id=click-default-ch`）或 gRPC 接口（`localhost:50051`）。
 
 
 <br/>
 <br/>
 
 #### PM2 部署
-PM2 是 Node.js 进程管理工具，可用于管理 Go 服务，提供进程守护和日志管理。
+PM2 是 Node.js 进程守护管理工具，可用于管理 Go 服务，提供进程守护和日志管理。
 1. 安装 Node.js 和 PM2：
 
    ```bash
@@ -116,9 +114,18 @@ PM2 是 Node.js 进程管理工具，可用于管理 Go 服务，提供进程守
        watch: false,
        max_memory_restart: '1G',
        env: {
-         CAPTCHA_HTTP_PORT: '8080',
-         CAPTCHA_GRPC_PORT: '50051',
-         CAPTCHA_CACHE_TYPE: 'memory'
+         CONFIG: 'config.json',
+         GO_CAPTCHA_CONFIG: 'gocaptcha.json',
+         SERVICE_NAME: 'go-captcha-service',
+         CACHE_TYPE: 'redis',
+         CACHE_ADDRS: 'localhost:6379',
+       },
+       env_production: {
+         CONFIG: 'config.json',
+         GO_CAPTCHA_CONFIG: 'gocaptcha.json',
+         SERVICE_NAME: 'go-captcha-service',
+         CACHE_TYPE: 'redis',
+         CACHE_ADDRS: 'localhost:6379',
        }
      }]
    };
@@ -147,23 +154,36 @@ PM2 是 Node.js 进程管理工具，可用于管理 Go 服务，提供进程守
 <br/>
 <br/>
 
-#### Docker 部署
+#### 使用源码 + Docker 部署
 
-1. 创建 `Dockerfile`：
+1. 创建 `Dockerfile` + 源码方式：
 
    ```dockerfile
-   FROM golang:1.18
-   
-   WORKDIR /app
-   
-   COPY . .
-   
-   RUN go mod download
-   RUN go build -o go-captcha-service
-   
-   EXPOSE 8080 50051
-   
-   CMD ["./go-captcha-service"]
+    FROM --platform=$BUILDPLATFORM golang:1.23 AS builder
+    WORKDIR /app
+    
+    COPY go.mod go.sum ./
+    RUN go mod download
+    
+    COPY . .
+    
+    ARG TARGETOS
+    ARG TARGETARCH
+    RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -ldflags="-w -s" -v -a -trimpath -o go-captcha-service ./cmd/go-captcha-service
+    
+    FROM scratch AS binary
+    WORKDIR /app
+    
+    COPY --from=builder /app/go-captcha-service .
+    COPY config.json .
+    COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+    
+    EXPOSE 8080 50051
+    
+    HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD ["/app/go-captcha-service", "--health-check"] || exit 1
+    
+    CMD ["/app/go-captcha-service"]
    ```
 
 2. 构建镜像：
@@ -178,7 +198,7 @@ PM2 是 Node.js 进程管理工具，可用于管理 Go 服务，提供进程守
    docker run -d -p 8080:8080 -p 50051:50051 \
      -v $(pwd)/config.json:/app/config.json \
      -v $(pwd)/gocaptcha.json:/app/gocaptcha.json \
-     -v $(pwd)/gocaptcha:/app/gocaptcha \
+     -v $(pwd)/resource/gocaptcha:/app/resource/gocaptcha \
      --name go-captcha-service go-captcha-service:latest
    ```
 
@@ -191,7 +211,7 @@ PM2 是 Node.js 进程管理工具，可用于管理 Go 服务，提供进程守
 1. 拉取官方镜像：
 
    ```bash
-   docker pull wenlng/go-captcha-service
+   docker pull wenlng/go-captcha-service@latest
    ```
 
 2. 运行容器：
@@ -200,12 +220,16 @@ PM2 是 Node.js 进程管理工具，可用于管理 Go 服务，提供进程守
    docker run -d -p 8080:8080 -p 50051:50051 \
      -v $(pwd)/config.json:/app/config.json \
      -v $(pwd)/gocaptcha.json:/app/gocaptcha.json \
-     -v $(pwd)/gocaptcha:/app/gocaptcha \
+     -v $(pwd)/resource/gocaptcha:/app/resource/gocaptcha \
      --name go-captcha-service wenlng/go-captcha-service:latest
    ```
 
 <br/>
 <br/>
+
+
+### 分布式部署
+
 
 #### 配置分布式缓存
 
@@ -214,9 +238,9 @@ PM2 是 Node.js 进程管理工具，可用于管理 Go 服务，提供进程守
    ```json
    {
      "cache_type": "redis",
-     "redis_addrs": "localhost:6379",
      "cache_ttl": 1800,
-     "cache_key_prefix": "GO_CAPTCHA_DATA:"
+     "cache_key_prefix": "GO_CAPTCHA_DATA:",
+     "redis_addrs": "localhost:6379"
    }
    ```
 
@@ -227,6 +251,8 @@ PM2 是 Node.js 进程管理工具，可用于管理 Go 服务，提供进程守
    ```
 
 <br/>
+<br/>
+
 
 #### 分布式动态配置
 注意：当开启分布式动态配置功能后，`config.json` 和 `gocaptcha.json` 会同时作用
@@ -236,8 +262,8 @@ PM2 是 Node.js 进程管理工具，可用于管理 Go 服务，提供进程守
    ```json
    {
      "enable_dynamic_config": true,
-     "service_discovery": "etcd",
-     "service_discovery_addrs": "localhost:2379"
+     "dynamic_config": "etcd",
+     "dynamic_config_addrs": "localhost:2379"
    }
    ```
 
@@ -247,17 +273,7 @@ PM2 是 Node.js 进程管理工具，可用于管理 Go 服务，提供进程守
    docker run -d -p 8848:8848 --name etcd bitnami/etcd::latest
    ```
 
-3. 例如在 gocaptcha.json 配置文件中，修改配置：
-    
-   ```json
-   {
-     "builder": {
-       
-     }
-   }
-   ```
-
-4. 配置文件同步与拉取
+3. 配置文件同步与拉取
 * 服务在启动时会根据 `config_version` 版本决定推送与拉取，当本地版本大于远程（如 Etcd）的配置版本时会将本地配置推送覆盖，反之自动拉取更新到本地（非文件式更新）。
 * 在服务启动后，动态配置管理器会实时监听远程（如 Etcd）的配置，当远程配置发生变更后，会摘取到本地进行版本比较，当大于本地版本时都会覆盖本地的配置。
 
@@ -289,7 +305,7 @@ PM2 是 Node.js 进程管理工具，可用于管理 Go 服务，提供进程守
 <br/>
 <br/>
 
-#### Docker Compose 分布式部署
+#### Docker Compose 多实例部署
 
 创建 `docker-compose.yml`，包含多个服务实例、Consul、Redis、ZooKeeper 和 Nacos：
 
@@ -305,8 +321,20 @@ services:
       - ./config.json:/app/config.json
       - ./gocaptcha.json:/app/gocaptcha.json
       - ./resources/gocaptcha:/app/resources/gocaptcha
+    environment:
+      - CONFIG=config.json
+      - GO_CAPTCHA_CONFIG=gocaptcha.json
+      - SERVICE_NAME=go-captcha-service
+      - CACHE_TYPE=redis
+      - CACHE_ADDRS=localhost:6379
+      - ENABLE_DYNAMIC_CONFIG=true
+      - DYNAMIC_CONFIG_TYPE=etcd
+      - DYNAMIC_CONFIG_ADDRS=localhost:2379
+      - ENABLE_SERVICE_DISCOVERY=true
+      - SERVICE_DISCOVERY_TYPE=etcd
+      - SERVICE_DISCOVERY_ADDRS=localhost:2379 
     depends_on:
-      - consul
+      - etcd
       - redis
     restart: unless-stopped
 
@@ -319,16 +347,30 @@ services:
       - ./config.json:/app/config.json
       - ./gocaptcha.json:/app/gocaptcha.json
       - ./resources/gocaptcha:/app/resources/gocaptcha
+    environment:
+      - CONFIG=config.json
+      - GO_CAPTCHA_CONFIG=gocaptcha.json
+      - SERVICE_NAME=go-captcha-service
+      - CACHE_TYPE=redis
+      - CACHE_ADDRS=localhost:6379
+      - ENABLE_DYNAMIC_CONFIG=true
+      - DYNAMIC_CONFIG_TYPE=etcd
+      - DYNAMIC_CONFIG_ADDRS=localhost:2379
+      - ENABLE_SERVICE_DISCOVERY=true
+      - SERVICE_DISCOVERY_TYPE=etcd
+      - SERVICE_DISCOVERY_ADDRS=localhost:2379
     depends_on:
-      - consul
+      - etcd
       - redis
     restart: unless-stopped
        
-  consul:
-    image: consul:latest
+  etcd:
+    image: bitnami/etcd:latest
     ports:
-      - "8500:8500"
-    command: agent -server -bootstrap -ui -client=0.0.0.0
+      - "2379:2379"
+    environment:
+      - ALLOW_NONE_AUTHENTICATION=yes
+    privileged: true
     restart: unless-stopped
 
   redis:
@@ -347,6 +389,86 @@ docker-compose up -d
 <br/>
 <br/>
 
+## 预置 API
+* 获取验证码
+    ```shell
+    curl -H "X-API-Key:my-secret-key-123" http://127.0.0.1:8080/api/v1/public/get-data\?id\=click-default-ch
+    ```
+
+* 验证码校验
+    ```shell
+    curl -X POST -H "X-API-Key:my-secret-key-123" -H "Content-Type:application/json" -d '{"id":"click-default-ch","captchaKey":"xxxx-xxxxx","value": "x1,y1,x2,y2"}' http://127.0.0.1:8181/api/v1/public/check-data
+    ```
+
+* 获取校验结果  data == "ok" 代表成功
+  ```shell
+  curl -H "X-API-Key:my-secret-key-123" http://127.0.0.1:8080/api/v1/public/check-status\?captchaKey\=xxxx-xxxx
+  ```
+
+* 获取状态信息（不允许暴露公网）
+  ```shell
+  curl -H "X-API-Key:my-secret-key-123" http://127.0.0.1:8080/api/v1/manage/get-status-info\?captchaKey\=xxxx-xxxx
+  ```
+
+* 上传资源（不允许暴露公网）
+  ```shell
+  curl -X POST -H "X-API-Key:my-secret-key-123" -F "dirname=imagesdir" -F "files=@/path/to/file1.jpg" -F "files=@/path/to/file2.jpg" http://127.0.0.1:8080/api/v1/manage/upload-resource
+  ```
+
+* 删除资源（不允许暴露公网）
+  ```shell
+  curl -X DELETE -H "X-API-Key:my-secret-key-123" http://127.0.0.1:8080/api/v1/manage/delete-resource?path=xxxxx.jpg
+  ```
+
+* 获取资源文件列表（不允许暴露公网）
+  ```shell
+  curl -H "X-API-Key:my-secret-key-123" http://127.0.0.1:8080/api/v1/manage/get-resource-list?path=imagesdir
+  ```
+
+* 获取验证码配置（不允许暴露公网）
+  ```shell
+  curl -H "X-API-Key:my-secret-key-123" http://127.0.0.1:8080/api/v1/manage/get-config
+  ```
+
+* 更新验证码配置，非文件更新（不允许暴露公网）
+  ```shell
+  curl -X POST -H "X-API-Key:my-secret-key-123" -H "Content-Type:application/json" -d '{"config_version":3,"resources":{ ... },"builder": { ... }}' http://127.0.0.1:8080/api/v1/manage/update-hot-config
+  ```
+  
+更详情和 Grpc API 请转到 [go-captcha-service-sdk](https://github.com/wenlng/go-captcha-service-sdk)
+
+<br/>
+<br/>
+
+
+## API 校验配置
+如果在 `config.json` 配置了 `api-keys`，则服务的 HTTP 和 gRPC 相关的 API 都需要通过请求头携带 X-API-Key 进行校验。
+
+内置 API 的 `/api/v1/manage` 是不允许暴露公网，不安全，需要匹配路由规则为 `/api/v1/public` 开放到公开，可以通过相关WEB应用服务器、反向代理服务器或者网关软件代理到内部服务，例如：Kong、Envoy、Tomcat、Nginx 等。
+
+以 Nginx 反向代理路由匹配规则公网路由规则示例
+```text
+server {
+    listen 80;
+    server_name example.com;
+
+    # 匹配 /api/v1/public 的请求，代理到后端
+    location ^~ /api/v1/public {
+        proxy_pass http://localhost:8080; # 假设服务运行在 8080 端口
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+
+    # 匹配 /api/v1/manage 的请求，禁止访问
+    location ^~ /api/v1/manage {
+        deny all; # 禁止所有请求，返回 403
+    }
+}
+```
+
+<br/>
+<br/>
 
 ## 配置说明
 
@@ -363,7 +485,24 @@ docker-compose up -d
 * cache-type：设置缓存类型，支持 redis、memory、etcd、memcache。
 * cache-ttl：设置缓存 TTL，单位秒。
 * cache-key-prefix：设置缓存键前缀，默认 "GO_CAPTCHA_DATA:"。
-* service-discovery：设置服务发现类型，支持 etcd、zookeeper、consul、nacos。
+
+* enable-dynamic-config：启用动态配置服务，默认 false。
+* dynamic-config-type：设置动态配置服务类型，支持 etcd、zookeeper、consul、nacos。
+* dynamic-config-addrs：设置动态配置服务器地址，逗号分隔。
+* dynamic-config-ttl：设置动态配置服务注册存活时间，单位秒，默认 10。
+* dynamic-config-keep-alive：设置动态配置服务保活间隔，单位秒，默认 3。
+* dynamic-config-max-retries：设置动态配置服务操作最大重试次数，默认 3。
+* dynamic-config-base-retry-delay：设置动态配置服务重试基础延迟，单位毫秒，默认 3。
+* dynamic-config-username：设置动态配置服务认证用户名。
+* dynamic-config-password：设置动态配置服务认证密码。
+* dynamic-config-tls-server-name：设置动态配置服务 TLS 服务器名称。
+* dynamic-config-tls-address：设置动态配置服务 TLS 服务器地址。
+* dynamic-config-tls-cert-file：设置动态配置服务 TLS 证书文件路径。
+* dynamic-config-tls-key-file：设置动态配置服务 TLS 密钥文件路径。
+* dynamic-config-tls-ca-file：设置动态配置服务 TLS CA 文件路径。
+
+* enable-service-discovery：启用服务发现，默认 false。
+* service-discovery-type：设置服务发现类型，支持 etcd、zookeeper、consul、nacos。
 * service-discovery-addrs：设置服务发现服务器地址，逗号分隔。
 * service-discovery-ttl：设置服务发现注册存活时间，单位秒，默认 10。
 * service-discovery-keep-alive：设置服务发现保活间隔，单位秒，默认 3。
@@ -376,15 +515,47 @@ docker-compose up -d
 * service-discovery-tls-cert-file：设置服务发现 TLS 证书文件路径。
 * service-discovery-tls-key-file：设置服务发现 TLS 密钥文件路径。
 * service-discovery-tls-ca-file：设置服务发现 TLS CA 文件路径。
+
 * rate-limit-qps：设置速率限制 QPS。
 * rate-limit-burst：设置速率限制突发量。
 * api-keys：设置 API 密钥，逗号分隔。
 * log-level：设置日志级别，支持 error、debug、warn、info。
-* enable-service-discovery：启用服务发现，默认 false。
-* enable-dynamic-config：启用动态配置，默认 false。
 * health-check：运行健康检查并退出，默认 false。
 * enable-cors：启用跨域资源共享，默认 false。
 
+<br/>
+
+### 环境变量
+基本配置：
+
+* CONFIG: 主配置文件路径，用于加载应用程序配置。
+* GO_CAPTCHA_CONFIG: CAPTCHA 服务的配置文件路径。
+* SERVICE_NAME: 服务名称，用于标识服务实例。
+* HTTP_PORT: HTTP 服务监听端口。
+* GRPC_PORT: gRPC 服务监听端口。
+* API_KEYS: API 密钥，用于认证或授权。
+
+缓存配置：
+* CACHE_TYPE: 缓存类型（如 redis、memcached、memory、etcd）。
+* CACHE_ADDRS: 缓存服务地址列表。
+* CACHE_USERNAME: 缓存服务认证用户名。
+* CACHE_PASSWORD: 缓存服务认证密码。
+
+动态配置服务：
+* ENABLE_DYNAMIC_CONFIG: 是否启用动态配置（值为 true 表示启用）。
+* DYNAMIC_CONFIG_TYPE: 动态配置类型（如 consul、zookeeper、nacos、etcd）。
+* DYNAMIC_CONFIG_ADDRS: 动态配置服务地址列表。
+* DYNAMIC_CONFIG_USERNAME: 动态配置服务认证用户名。
+* DYNAMIC_CONFIG_PASSWORD: 动态配置服务认证密码。
+
+服务发现：
+* ENABLE_SERVICE_DISCOVERY: 是否启用服务发现（值为 true 表示启用）。
+* SERVICE_DISCOVERY_TYPE: 服务发现类型（如 consul、zookeeper、nacos、etcd）。
+* SERVICE_DISCOVERY_ADDRS: 服务发现服务地址列表。
+* SERVICE_DISCOVERY_USERNAME: 服务发现服务认证用户名。
+* SERVICE_DISCOVERY_PASSWORD: 服务发现服务认证密码。
+
+<br/>
 
 ### 配置文件
 服务使用两个配置文件：`config.json` 和 `gocaptcha.json`，分别定义服务运行参数和验证码生成的配置.
@@ -405,9 +576,24 @@ docker-compose up -d
    "cache_type": "memory",
    "cache_ttl": 1800,
    "cache_key_prefix": "GO_CAPTCHA_DATA:",
+  
    "enable_dynamic_config": false,
+   "dynamic_config_type": "etcd",
+   "dynamic_config_addrs": "localhost:2379",
+   "dynamic_config_username": "",
+   "dynamic_config_password": "",
+   "dynamic_config_ttl": 10,
+   "dynamic_config_keep_alive": 3,
+   "dynamic_config_max_retries": 3,
+   "dynamic_config_base_retry_delay": 500,
+   "dynamic_config_tls_server_name": "",
+   "dynamic_config_tls_address": "",
+   "dynamic_config_tls_cert_file": "",
+   "dynamic_config_tls_key_file": "",
+   "dynamic_config_tls_ca_file": "",
+  
    "enable_service_discovery": false,
-   "service_discovery": "etcd",
+   "service_discovery_type": "etcd",
    "service_discovery_addrs": "localhost:2379",
    "service_discovery_username": "",
    "service_discovery_password": "",
@@ -420,6 +606,7 @@ docker-compose up -d
    "service_discovery_tls_cert_file": "",
    "service_discovery_tls_key_file": "",
    "service_discovery_tls_ca_file": "",
+  
    "rate_limit_qps": 1000,
    "rate_limit_burst": 1000,
    "enable_cors": true,
@@ -444,9 +631,28 @@ docker-compose up -d
    - `memcache`：高性能分布式缓存，适合高并发。
 - `cache_ttl` (整数)：缓存有效期（秒），默认 `1800`.
 - `cache_key_prefix` (字符串)：缓存键前缀，默认 `GO_CAPTCHA_DATA:`。
-- `enable_dynamic_config` (布尔)：启用动态配置，默认 `false`。
+
+- `enable_dynamic_config` (布尔)：启用动态配置服务，默认 `false`。
+- `dynamic_config_type` (字符串)：动态配置服务类型，默认 `etcd`：
+    - `etcd`：适合一致性要求高的场景。
+    - `nacos`：适合云原生环境。
+    - `zookeeper`：适合复杂分布式系统。
+    - `consul`：轻量级，支持健康检查。
+- `dynamic_config_addrs` (字符串)：动态配置服务地址，如 Etcd 为 `localhost:2379`，Nacos 为 `localhost:8848`。
+- `dynamic_config_username` (字符串)：用户名，例如 Nacos 的默认用户名为`nacos`，默认空。
+- `dynamic_config_password` (字符串)：密码，例如 Nacos 的默认用户密码为`nacos`，默认空。
+- `dynamic_config_ttl` (整数)：服务租约时间（秒），默认 `10`。
+- `dynamic_config_keep_alive` (整数)：心跳间隔（秒），默认 `3`。
+- `dynamic_config_max_retries` (整数)：重试次数，默认 `3`。
+- `dynamic_config_base_retry_delay` (整数)：重试延迟（毫秒），默认 `500`。
+- `dynamic_config_tls_server_name` (字符串)：TLS 服务器名称，默认空。
+- `dynamic_config_tls_address` (字符串)：TLS 地址，默认空。
+- `dynamic_config_tls_cert_file` (字符串)：TLS 证书文件，默认空。
+- `dynamic_config_tls_key_file` (字符串)：TLS 密钥文件，默认空。
+- `dynamic_config_tls_ca_file` (字符串)：TLS CA 证书文件，默认空。
+
 - `enable_service_discovery` (布尔)：启用服务发现，默认 `false`。
-- `service_discovery` (字符串)：服务发现类型，默认 `etcd`：
+- `service_discovery_type` (字符串)：服务发现类型，默认 `etcd`：
    - `etcd`：适合一致性要求高的场景。
    - `nacos`：适合云原生环境。
    - `zookeeper`：适合复杂分布式系统。
@@ -463,11 +669,12 @@ docker-compose up -d
 - `service_discovery_tls_cert_file` (字符串)：TLS 证书文件，默认空。
 - `service_discovery_tls_key_file` (字符串)：TLS 密钥文件，默认空。
 - `service_discovery_tls_ca_file` (字符串)：TLS CA 证书文件，默认空。
+
 - `rate_limit_qps` (整数)：API 每秒请求限流，默认 `1000`。
 - `rate_limit_burst` (整数)：API 限流突发容量，默认 `1000`。
 - `enable_cors` (布尔)：启用 CORS，默认 `true`。
 - `log_level` (字符串)：日志级别（`debug`、`info`、`warn`、`error`），默认 `info`。
-- `api_keys` (字符串数组)：API 认证密钥，默认包含示例密钥。
+- `api_keys` (字符串数组)：API 认证密钥。
 
 ### gocaptcha.json
 
@@ -571,17 +778,17 @@ docker-compose up -d
       "click-dark-ch": {
         "version": "0.0.1",
         "language": "chinese",
-        // ...
+        // 同上...
       },
       "click-default-en": {
         "version": "0.0.1",
         "language": "english",
-        // ...
+        // 同上...
       },
       "click-dark-en": {
         "version": "0.0.1",
         "language": "english",
-        // ...
+        // 同上...
       }
     },
     "click_shape_config_maps": {
@@ -678,7 +885,6 @@ docker-compose up -d
 
 - `config_version` (整数)：配置文件版本号，用于分布动态配置管理，默认 `1`。
 
-
 ##### resources 字段
 
 - `version` (字符串)：资源配置版本号，用于控制重新创建新的验证码实例，默认 `0.0.1`。
@@ -717,7 +923,7 @@ docker-compose up -d
 
 ###### click_config_maps
 
-定义文本点击验证码的配置，支持中英文和明暗主题，key为ID，在请求时传递，例如：`api/v1/get-data?id=click-default-ch`。
+定义文本点击验证码的配置，支持中英文和明暗主题，key为ID，在请求验证码API时传递，例如：`api/v1/public/get-data?id=click-default-ch`。
 
 - `click-default-ch` (对象)：中文默认主题配置。
     - `version` (字符串)：配置版本号，用于控制重新创建新的验证码实例，默认 `0.0.1`。
@@ -834,20 +1040,17 @@ docker-compose up -d
 
 
 ### 配置热重载说明
-`gocaptcha.json` 热重载以每个配置顶的 version 字段决定是否生效。
+`gocaptcha.json` 热重载以每个配置项的 version 字段决定是否生效。
 
 `config.json` 热重载有效的字段如下：
-* redis_addrs
-* etcd_addrs
-* memcache_addrs
 * cache_type
+* cahce_addrs
 * cache_ttl
 * cache_key_prefix
 * api_keys
 * log_level
 * rate_limit_qps
 * rate_limit_burst
-
 
 
 ### 测试：
@@ -859,16 +1062,21 @@ docker-compose up -d
 - 动态配置：测试 Nacos 配置更新。
 
 
-### 压力测试
+<br/>
+<br/>
 
-测试 HTTP 接口：
+## 赞助一下
 
-```bash
-wrk -t12 -c400 -d30s http://127.0.0.1:8080/api/v1/get-data?id=click-default-ch
-```
+<p>如果觉得项目有帮助，可以请作者喝杯咖啡 🍹</p>
+<div>
+<a href="http://witkeycode.com/sponsor" target="_blank"><img src="http://47.104.180.148/payment-code/wxpay.png" alt="Buy Me A Coffee" style="width: 217px !important;" ></a>
+<a href="http://witkeycode.com/sponsor" target="_blank"><img src="http://47.104.180.148/payment-code/alipay.png" alt="Buy Me A Coffee" style="width: 217px !important;" ></a>
+</div>
 
-测试 gRPC 接口：
+<br/>
 
-```bash
-grpcurl -plaintext -d '{"id":"click-default-ch"}' localhost:50051 gocaptcha.GoCaptchaService/GetData
-```
+## LICENSE
+Go Captcha Service source code is licensed under the Apache Licence, Version 2.0 [http://www.apache.org/licenses/LICENSE-2.0.html](http://www.apache.org/licenses/LICENSE-2.0.html)
+
+<br/>
+

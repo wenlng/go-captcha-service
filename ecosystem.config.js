@@ -8,15 +8,17 @@ module.exports = {
     max_memory_restart: '1G',
     env: {
       CONFIG: 'config.json',
+      GO_CAPTCHA_CONFIG: 'gocaptcha.json',
+      SERVICE_NAME: 'go-captcha-service',
       CACHE_TYPE: 'redis',
-      CACHE_TTL: '60',
-      CACHE_CLEANUP_INTERVAL: '10',
+      CACHE_ADDRS: 'localhost:6379',
     },
     env_production: {
-      CONFIG: '/etc/go-captcha-service/config.json',
-      CACHE_TYPE: 'etcd',
-      CACHE_TTL: '30',
-      CACHE_CLEANUP_INTERVAL: '5',
+      CONFIG: 'config.json',
+      GO_CAPTCHA_CONFIG: 'gocaptcha.json',
+      SERVICE_NAME: 'go-captcha-service',
+      CACHE_TYPE: 'redis',
+      CACHE_ADDRS: 'localhost:6379',
     }
   }]
 };

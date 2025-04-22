@@ -52,9 +52,9 @@ type CacheManager struct {
 // CacheMgrParams ..
 type CacheMgrParams struct {
 	Type          CacheType
-	RedisAddrs    string
-	EtcdAddrs     string
-	MemCacheAddrs string
+	CacheAddrs    string
+	CacheUsername string
+	CachePassword string
 	KeyPrefix     string
 	Ttl           time.Duration
 	CleanInt      time.Duration
@@ -78,14 +78,13 @@ func (cm *CacheManager) GetCache() Cache {
 func (cm *CacheManager) Setup(arg *CacheMgrParams) error {
 	var curCache Cache
 	var err error
-	var curAddrs string
+	curAddrs := arg.CacheAddrs
 	switch arg.Type {
 	case CacheTypeRedis:
-		curAddrs = arg.RedisAddrs
 		if cm.cAddress == curAddrs && cm.cKeyPrefix == arg.KeyPrefix && cm.cTtl == arg.Ttl {
 			return nil
 		}
-		curCache, err = NewRedisClient(arg.RedisAddrs, arg.KeyPrefix, arg.Ttl)
+		curCache, err = NewRedisClient(arg.CacheAddrs, arg.KeyPrefix, arg.Ttl, arg.CacheUsername, arg.CachePassword)
 		if err != nil {
 			return fmt.Errorf("failed to initialize Redis: %v", err)
 		}
@@ -95,11 +94,10 @@ func (cm *CacheManager) Setup(arg *CacheMgrParams) error {
 		}
 		curCache = NewMemoryCache(arg.KeyPrefix, arg.Ttl, arg.CleanInt)
 	case CacheTypeEtcd:
-		curAddrs = arg.EtcdAddrs
 		if cm.cAddress == curAddrs && cm.cKeyPrefix == arg.KeyPrefix && cm.cTtl == arg.Ttl {
 			return nil
 		}
-		curCache, err = NewEtcdClient(arg.EtcdAddrs, arg.KeyPrefix, arg.Ttl)
+		curCache, err = NewEtcdClient(arg.CacheAddrs, arg.KeyPrefix, arg.Ttl, arg.CacheUsername, arg.CachePassword)
 		if err != nil {
 			return fmt.Errorf("failed to initialize Etcd: %v", err)
 		}
@@ -107,8 +105,7 @@ func (cm *CacheManager) Setup(arg *CacheMgrParams) error {
 		if cm.cAddress == curAddrs && cm.cKeyPrefix == arg.KeyPrefix && cm.cTtl == arg.Ttl {
 			return nil
 		}
-		curAddrs = arg.MemCacheAddrs
-		curCache, err = NewMemcacheClient(arg.MemCacheAddrs, arg.KeyPrefix, arg.Ttl)
+		curCache, err = NewMemcacheClient(arg.CacheAddrs, arg.KeyPrefix, arg.Ttl, arg.CacheUsername, arg.CachePassword)
 		if err != nil {
 			return fmt.Errorf("failed to initialize Memcached: %v", err)
 		}

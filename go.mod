@@ -4,10 +4,10 @@ go 1.23.0
 
 require (
 	github.com/alicebob/miniredis/v2 v2.32.1
-	github.com/bradfitz/gomemcache v0.0.0-20230905024940-24af94b03874
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0
 	github.com/google/uuid v1.6.0
+	github.com/memcachier/mc/v3 v3.0.3
 	github.com/redis/go-redis/v9 v9.6.1
 	github.com/sony/gobreaker v0.5.0
 	github.com/stretchr/testify v1.9.0

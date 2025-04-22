@@ -22,9 +22,11 @@ type RedisClient struct {
 }
 
 // NewRedisClient ..
-func NewRedisClient(addrs, prefix string, ttl time.Duration) (*RedisClient, error) {
+func NewRedisClient(addrs, prefix string, ttl time.Duration, username, password string) (*RedisClient, error) {
 	client := redis.NewClient(&redis.Options{
-		Addr: addrs,
+		Addr:     addrs,
+		Username: username,
+		Password: password,
 	})
 	_, err := client.Ping(context.Background()).Result()
 	if err != nil {

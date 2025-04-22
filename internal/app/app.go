@@ -65,13 +65,31 @@ func NewApp() (*App, error) {
 	serviceName := flag.String("service-name", "", "Name for service")
 	httpPort := flag.String("http-port", "", "Port for HTTP server")
 	grpcPort := flag.String("grpc-port", "", "Port for gRPC server")
-	redisAddrs := flag.String("redis-addrs", "", "Comma-separated Redis cluster addresses")
-	etcdAddrs := flag.String("etcd-addrs", "", "Comma-separated etcd addresses")
-	memcacheAddrs := flag.String("memcache-addrs", "", "Comma-separated Memcached addresses")
+
 	cacheType := flag.String("cache-type", "", "CacheManager type: redis, memory, etcd, memcache")
+	cacheAddrs := flag.String("cache-addrs", "", "Comma-separated Cache cluster addresses")
+	cacheUsername := flag.String("cache-username", "", "Comma-separated cache cluster username")
+	cachePassword := flag.String("cache-password", "", "Comma-separated cache cluster password")
 	cacheTTL := flag.Int("cache-ttl", 0, "CacheManager TTL in seconds")
 	cacheKeyPrefix := flag.String("cache-key-prefix", "GO_CAPTCHA_DATA:", "Key prefix for cache")
-	serviceDiscovery := flag.String("service-discovery", "", "Service discovery: etcd, zookeeper, consul, nacos")
+
+	enableDynamicConfig := flag.Bool("enable-dynamic-config", false, "Enable dynamic config")
+	dynamicConfigType := flag.String("dynamic-config-type", "", "Service discovery: etcd, zookeeper, consul, nacos")
+	dynamicConfigAddrs := flag.String("dynamic-config-addrs", "", "Comma-separated list of service dynamic config addresses")
+	dynamicConfigTTL := flag.Int("dynamic-config-ttl", 10, "Time-to-live in seconds for dynamic config registrations")
+	dynamicConfigKeepAlive := flag.Int("dynamic-config-keep-alive", 3, "Duration in seconds for dynamic config keep-alive interval")
+	dynamicConfigMaxRetries := flag.Int("dynamic-config-max-retries", 3, "Maximum number of retries for dynamic config operations")
+	dynamicConfigBaseRetryDelay := flag.Int("dynamic-config-base-retry-delay", 3, "Base delay in milliseconds for dynamic config retry attempts")
+	dynamicConfigUsername := flag.String("dynamic-config-username", "", "Username for dynamic config authentication")
+	dynamicConfigPassword := flag.String("dynamic-config-password", "", "Password for dynamic config authentication")
+	dynamicConfigTlsServerName := flag.String("dynamic-config-tls-server-name", "", "TLS server name for dynamic config connection")
+	dynamicConfigTlsAddress := flag.String("dynamic-config-tls-address", "", "TLS address for service dynamic config")
+	dynamicConfigTlsCertFile := flag.String("dynamic-config-tls-cert-file", "", "Path to TLS certificate file for dynamic config")
+	dynamicConfigTlsKeyFile := flag.String("dynamic-config-tls-key-file", "", "Path to TLS key file for dynamic config")
+	dynamicConfigTlsCaFile := flag.String("dynamic-config-tls-ca-file", "", "Path to TLS CA file for dynamic config")
+
+	enableServiceDiscovery := flag.Bool("enable-service-discovery", false, "Enable service discovery")
+	serviceDiscoveryType := flag.String("service-discovery-type", "", "Service discovery: etcd, zookeeper, consul, nacos")
 	serviceDiscoveryAddrs := flag.String("service-discovery-addrs", "", "Comma-separated list of service discovery server addresses")
 	serviceDiscoveryTTL := flag.Int("service-discovery-ttl", 10, "Time-to-live in seconds for service discovery registrations")
 	serviceDiscoveryKeepAlive := flag.Int("service-discovery-keep-alive", 3, "Duration in seconds for service discovery keep-alive interval")
@@ -84,15 +102,82 @@ func NewApp() (*App, error) {
 	serviceDiscoveryTlsCertFile := flag.String("service-discovery-tls-cert-file", "", "Path to TLS certificate file for service discovery")
 	serviceDiscoveryTlsKeyFile := flag.String("service-discovery-tls-key-file", "", "Path to TLS key file for service discovery")
 	serviceDiscoveryTlsCaFile := flag.String("service-discovery-tls-ca-file", "", "Path to TLS CA file for service discovery")
+
 	rateLimitQPS := flag.Int("rate-limit-qps", 0, "Rate limit QPS")
 	rateLimitBurst := flag.Int("rate-limit-burst", 0, "Rate limit burst")
 	apiKeys := flag.String("api-keys", "", "Comma-separated API keys")
 	logLevel := flag.String("log-level", "", "Set log level: error, debug, warn, info")
-	enableServiceDiscovery := flag.Bool("enable-service-discovery", false, "Enable service discovery")
-	enableDynamicConfig := flag.Bool("enable-dynamic-config", false, "Enable dynamic config")
 	healthCheckFlag := flag.Bool("health-check", false, "Run health check and exit")
 	enableCorsFlag := flag.Bool("enable-cors", false, "Enable cross-domain resources")
+
 	flag.Parse()
+
+	// Read environment variables
+	if *serviceName == "" {
+		if v, exists := os.LookupEnv("CONFIG"); exists {
+			*configFile = v
+		}
+		if v, exists := os.LookupEnv("GO_CAPTCHA_CONFIG"); exists {
+			*gocaptchaConfigFile = v
+		}
+
+		if v, exists := os.LookupEnv("SERVICE_NAME"); exists {
+			*serviceName = v
+		}
+		if v, exists := os.LookupEnv("HTTP_PORT"); exists {
+			*httpPort = v
+		}
+		if v, exists := os.LookupEnv("GRPC_PORT"); exists {
+			*grpcPort = v
+		}
+		if v, exists := os.LookupEnv("API_KEYS"); exists {
+			*apiKeys = v
+		}
+		if v, exists := os.LookupEnv("CACHE_TYPE"); exists {
+			*cacheType = v
+		}
+		if v, exists := os.LookupEnv("CACHE_ADDRS"); exists {
+			*cacheAddrs = v
+		}
+		if v, exists := os.LookupEnv("CACHE_USERNAME"); exists {
+			*cacheUsername = v
+		}
+		if v, exists := os.LookupEnv("CACHE_PASSWORD"); exists {
+			*cachePassword = v
+		}
+
+		if v, exists := os.LookupEnv("ENABLE_DYNAMIC_CONFIG"); exists {
+			*enableDynamicConfig = v == "true"
+		}
+		if v, exists := os.LookupEnv("DYNAMIC_CONFIG_TYPE"); exists {
+			*dynamicConfigType = v
+		}
+		if v, exists := os.LookupEnv("DYNAMIC_CONFIG_ADDRS"); exists {
+			*dynamicConfigAddrs = v
+		}
+		if v, exists := os.LookupEnv("DYNAMIC_CONFIG_USERNAME"); exists {
+			*dynamicConfigUsername = v
+		}
+		if v, exists := os.LookupEnv("DYNAMIC_CONFIG_PASSWORD"); exists {
+			*dynamicConfigPassword = v
+		}
+
+		if v, exists := os.LookupEnv("ENABLE_SERVICE_DISCOVERY"); exists {
+			*enableServiceDiscovery = v == "true"
+		}
+		if v, exists := os.LookupEnv("SERVICE_DISCOVERY_TYPE"); exists {
+			*serviceDiscoveryType = v
+		}
+		if v, exists := os.LookupEnv("SERVICE_DISCOVERY_ADDRS"); exists {
+			*serviceDiscoveryAddrs = v
+		}
+		if v, exists := os.LookupEnv("SERVICE_DISCOVERY_USERNAME"); exists {
+			*serviceDiscoveryUsername = v
+		}
+		if v, exists := os.LookupEnv("SERVICE_DISCOVERY_PASSWORD"); exists {
+			*serviceDiscoveryPassword = v
+		}
+	}
 
 	// Initialize logger
 	logger, err := zap.NewProduction()
@@ -130,34 +215,51 @@ func NewApp() (*App, error) {
 	// Merge command-line flags
 	cfg := dc.Get()
 	cfg = config.MergeWithFlags(cfg, map[string]interface{}{
-		"service-name":                       *serviceName,
-		"http-port":                          *httpPort,
-		"grpc-port":                          *grpcPort,
-		"redis-addrs":                        *redisAddrs,
-		"etcd-addrs":                         *etcdAddrs,
-		"memcache-addrs":                     *memcacheAddrs,
-		"cache-type":                         *cacheType,
-		"cache-ttl":                          *cacheTTL,
-		"cache-key-prefix":                   *cacheKeyPrefix,
+		"service-name": *serviceName,
+		"http-port":    *httpPort,
+		"grpc-port":    *grpcPort,
+
+		"cache-type":       *cacheType,
+		"cache-addrs":      *cacheAddrs,
+		"cache-username":   *cacheUsername,
+		"cache-password":   *cachePassword,
+		"cache-ttl":        *cacheTTL,
+		"cache-key-prefix": *cacheKeyPrefix,
+
+		"enable-dynamic-config":           *enableDynamicConfig,
+		"dynamic-config-type":             *dynamicConfigType,
+		"dynamic-config-addrs":            *dynamicConfigAddrs,
+		"dynamic-config-username":         *dynamicConfigUsername,
+		"dynamic-config-password":         *dynamicConfigPassword,
+		"dynamic-config-ttl":              *dynamicConfigTTL,
+		"dynamic-config-keep-alive":       *dynamicConfigKeepAlive,
+		"dynamic-config-max-retries":      *dynamicConfigMaxRetries,
+		"dynamic-config-base-retry-delay": *dynamicConfigBaseRetryDelay,
+		"dynamic-config-tls-server-name":  *dynamicConfigTlsServerName,
+		"dynamic-config-tls-address":      *dynamicConfigTlsAddress,
+		"dynamic-config-tls-cert-file":    *dynamicConfigTlsCertFile,
+		"dynamic-config-tls-key-file":     *dynamicConfigTlsKeyFile,
+		"dynamic-config-tls-ca-file":      *dynamicConfigTlsCaFile,
+
 		"enable-service-discovery":           *enableServiceDiscovery,
-		"service-discovery":                  *serviceDiscovery,
+		"service-discovery-type":             *serviceDiscoveryType,
 		"service-discovery-addrs":            *serviceDiscoveryAddrs,
-		"service-discovery-ttl":              serviceDiscoveryTTL,
-		"service-discovery-keep-alive":       serviceDiscoveryKeepAlive,
-		"service-discovery-max-retries":      serviceDiscoveryMaxRetries,
-		"service-discovery-base-retry-delay": serviceDiscoveryBaseRetryDelay,
-		"service-discovery-username":         serviceDiscoveryUsername,
-		"service-discovery-password":         serviceDiscoveryPassword,
-		"service-discovery-tls-server-name":  serviceDiscoveryTlsServerName,
-		"service-discovery-tls-address":      serviceDiscoveryTlsAddress,
-		"service-discovery-tls-cert-file":    serviceDiscoveryTlsCertFile,
-		"service-discovery-tls-key-file":     serviceDiscoveryTlsKeyFile,
-		"service-discovery-tls-ca-file":      serviceDiscoveryTlsCaFile,
-		"rate-limit-qps":                     *rateLimitQPS,
-		"rate-limit-burst":                   *rateLimitBurst,
-		"enable-cors":                        *enableCorsFlag,
-		"enable-dynamic-config":              *enableDynamicConfig,
-		"api-keys":                           *apiKeys,
+		"service-discovery-username":         *serviceDiscoveryUsername,
+		"service-discovery-password":         *serviceDiscoveryPassword,
+		"service-discovery-ttl":              *serviceDiscoveryTTL,
+		"service-discovery-keep-alive":       *serviceDiscoveryKeepAlive,
+		"service-discovery-max-retries":      *serviceDiscoveryMaxRetries,
+		"service-discovery-base-retry-delay": *serviceDiscoveryBaseRetryDelay,
+		"service-discovery-tls-server-name":  *serviceDiscoveryTlsServerName,
+		"service-discovery-tls-address":      *serviceDiscoveryTlsAddress,
+		"service-discovery-tls-cert-file":    *serviceDiscoveryTlsCertFile,
+		"service-discovery-tls-key-file":     *serviceDiscoveryTlsKeyFile,
+		"service-discovery-tls-ca-file":      *serviceDiscoveryTlsCaFile,
+
+		"rate-limit-qps":   *rateLimitQPS,
+		"rate-limit-burst": *rateLimitBurst,
+		"enable-cors":      *enableCorsFlag,
+		"api-keys":         *apiKeys,
 	})
 	if err = dc.Update(cfg); err != nil {
 		logger.Fatal("[App] Configuration validation failed", zap.Error(err))
@@ -298,14 +400,15 @@ func (a *App) startHTTPServer(svcCtx *common.SvcContext, cfg *config.Config) err
 
 	mwChain := middleware.NewChainHTTP(middlewares...)
 
-	http.Handle("/api/v1/get-data", mwChain.Then(handlers.GetDataHandler))
-	http.Handle("/api/v1/check-data", mwChain.Then(handlers.CheckDataHandler))
-	http.Handle("/api/v1/check-status", mwChain.Then(handlers.CheckStatusHandler))
-	http.Handle("/api/v1/get-status-info", mwChain.Then(handlers.GetStatusInfoHandler))
-	http.Handle("/api/v1/del-status-info", mwChain.Then(handlers.DelStatusInfoHandler))
-	http.Handle("/api/v1/status/health", mwChain.Then(handlers.HealthStatusHandler))
+	http.Handle("/status/health", mwChain.Then(handlers.HealthStatusHandler))
 	http.Handle("/rate-limit", mwChain.Then(middleware.RateLimitHandler(a.limiter, a.logger)))
+	
+	http.Handle("/api/v1/public/get-data", mwChain.Then(handlers.GetDataHandler))
+	http.Handle("/api/v1/public/check-data", mwChain.Then(handlers.CheckDataHandler))
+	http.Handle("/api/v1/public/check-status", mwChain.Then(handlers.CheckStatusHandler))
 
+	http.Handle("/api/v1/manage/get-status-info", mwChain.Then(handlers.GetStatusInfoHandler))
+	http.Handle("/api/v1/manage/del-status-info", mwChain.Then(handlers.DelStatusInfoHandler))
 	http.Handle("/api/v1/manage/upload-resource", mwChain.Then(handlers.UploadResourceHandler))
 	http.Handle("/api/v1/manage/delete-resource", mwChain.Then(handlers.DeleteResourceHandler))
 	http.Handle("/api/v1/manage/get-resource-list", mwChain.Then(handlers.GetResourceListHandler))

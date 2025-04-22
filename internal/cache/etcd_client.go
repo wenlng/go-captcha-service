@@ -24,10 +24,12 @@ type EtcdClient struct {
 }
 
 // NewEtcdClient ..
-func NewEtcdClient(addrs, prefix string, ttl time.Duration) (*EtcdClient, error) {
+func NewEtcdClient(addrs, prefix string, ttl time.Duration, username, password string) (*EtcdClient, error) {
 	client, err := clientv3.New(clientv3.Config{
 		Endpoints:   []string{addrs},
 		DialTimeout: 5 * time.Second,
+		Username:    username,
+		Password:    password,
 	})
 	if err != nil {
 		return nil, err

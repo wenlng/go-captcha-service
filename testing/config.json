@@ -5,11 +5,11 @@
   "grpc_port": "50051",
 
   "cache_type": "memory",
-  "cache_addrs": "",
-  "cache_username": "",
-  "cache_password": "",
   "cache_key_prefix": "GO_CAPTCHA_DATA:",
   "cache_ttl": 1800,
+  "cache_addrs": "localhost:6379",
+  "cache_username": "",
+  "cache_password": "",
 
   "enable_dynamic_config": false,
   "dynamic_config_type": "etcd",

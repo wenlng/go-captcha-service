@@ -143,19 +143,26 @@ func (cl *RotateCaptLogic) CheckData(ctx context.Context, key string, angle int)
 		return false, fmt.Errorf("failed to json unmarshal: %v", err)
 	}
 
+	if cacheCaptData.Status == 2 {
+		return false, nil
+	}
+
 	ret := rotate.CheckAngle(int64(angle), int64(dct.Angle), 2)
 
 	if ret {
 		cacheCaptData.Status = 1
-		cacheDataByte, err := json.Marshal(cacheCaptData)
-		if err != nil {
-			return ret, fmt.Errorf("failed to json marshal: %v", err)
-		}
+	} else {
+		cacheCaptData.Status = 2
+	}
 
-		err = cl.cacheMgr.GetCache().SetCache(ctx, key, string(cacheDataByte))
-		if err != nil {
-			return ret, fmt.Errorf("failed to update cache:: %v", err)
-		}
+	cacheDataByte, err := json.Marshal(cacheCaptData)
+	if err != nil {
+		return ret, fmt.Errorf("failed to json marshal: %v", err)
+	}
+
+	err = cl.cacheMgr.GetCache().SetCache(ctx, key, string(cacheDataByte))
+	if err != nil {
+		return ret, fmt.Errorf("failed to update cache:: %v", err)
 	}
 
 	return ret, nil

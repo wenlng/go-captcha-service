@@ -20,9 +20,9 @@ type Config struct {
 	ServiceName    string   `json:"service_name"`
 	HTTPPort       string   `json:"http_port"`
 	GRPCPort       string   `json:"grpc_port"`
-	RedisAddrs     string   `json:"redis_addrs"`
-	EtcdAddrs      string   `json:"etcd_addrs"`
-	MemcacheAddrs  string   `json:"memcache_addrs"`
+	CacheAddrs     string   `json:"cache_addrs"`
+	CacheUsername  string   `json:"cache_username"`
+	CachePassword  string   `json:"cache_password"`
 	CacheType      string   `json:"cache_type"` // redis, memory, etcd, memcache
 	CacheTTL       int      `json:"cache_ttl"`  // seconds
 	CacheKeyPrefix string   `json:"cache_key_prefix"`
@@ -32,9 +32,23 @@ type Config struct {
 	APIKeys        []string `json:"api_keys"`
 	LogLevel       string   `json:"log_level"` // error, debug, info, none
 
-	EnableDynamicConfig            bool   `json:"enable_dynamic_config"`
+	EnableDynamicConfig         bool   `json:"enable_dynamic_config"`
+	DynamicConfigType           string `json:"dynamic_config_type"` // etcd, zookeeper, consul, nacos
+	DynamicConfigAddrs          string `json:"dynamic_config_addrs"`
+	DynamicConfigTTL            int    `json:"dynamic_config_ttl"`
+	DynamicConfigKeepAlive      int    `json:"dynamic_config_keep_alive"`
+	DynamicConfigMaxRetries     int    `json:"dynamic_config_max_retries"`
+	DynamicConfigBaseRetryDelay int    `json:"dynamic_config_base_retry_delay"`
+	DynamicConfigUsername       string `json:"dynamic_config_username"`
+	DynamicConfigPassword       string `json:"dynamic_config_password"`
+	DynamicConfigTlsServerName  string `json:"dynamic_config_tls_server_name"`
+	DynamicConfigTlsAddress     string `json:"dynamic_config_tls_address"`
+	DynamicConfigTlsCertFile    string `json:"dynamic_config_tls_cert_file"`
+	DynamicConfigTlsKeyFile     string `json:"dynamic_config_tls_key_file"`
+	DynamicConfigTlsCaFile      string `json:"dynamic_config_tls_ca_file"`
+
 	EnableServiceDiscovery         bool   `json:"enable_service_discovery"`
-	ServiceDiscovery               string `json:"service_discovery"` // etcd, zookeeper, consul, nacos
+	ServiceDiscoveryType           string `json:"service_discovery_type"` // etcd, zookeeper, consul, nacos
 	ServiceDiscoveryAddrs          string `json:"service_discovery_addrs"`
 	ServiceDiscoveryTTL            int    `json:"service_discovery_ttl"`
 	ServiceDiscoveryKeepAlive      int    `json:"service_discovery_keep_alive"`
@@ -186,9 +200,9 @@ func (dc *DynamicConfig) HotUpdate(cfg Config) error {
 	dc.Config.ConfigVersion = cfg.ConfigVersion
 	dc.Config.APIKeys = cfg.APIKeys
 	dc.Config.LogLevel = cfg.LogLevel
-	dc.Config.RedisAddrs = cfg.RedisAddrs
-	dc.Config.EtcdAddrs = cfg.EtcdAddrs
-	dc.Config.MemcacheAddrs = cfg.MemcacheAddrs
+	dc.Config.CacheAddrs = cfg.CacheAddrs
+	dc.Config.CacheUsername = cfg.CacheUsername
+	dc.Config.CachePassword = cfg.CachePassword
 	dc.Config.CacheType = cfg.CacheType
 	dc.Config.CacheTTL = cfg.CacheTTL
 	dc.Config.CacheKeyPrefix = cfg.CacheKeyPrefix
@@ -285,18 +299,9 @@ func Validate(config Config) error {
 		return fmt.Errorf("invalid cache_type: %s, must be redis, memory, etcd, or memcache", config.CacheType)
 	}
 
-	switch config.CacheType {
-	case "redis":
-		if !isValidAddrs(config.RedisAddrs) {
-			return fmt.Errorf("invalid redis_addrs: %s", config.RedisAddrs)
-		}
-	case "etcd":
-		if !isValidAddrs(config.EtcdAddrs) {
-			return fmt.Errorf("invalid etcd_addrs: %s", config.EtcdAddrs)
-		}
-	case "memcache":
-		if !isValidAddrs(config.MemcacheAddrs) {
-			return fmt.Errorf("invalid memcache_addrs: %s", config.MemcacheAddrs)
+	if config.CacheType != "" && config.CacheType != "memory" {
+		if !isValidAddrs(config.CacheAddrs) {
+			return fmt.Errorf("invalid cache_addrs: %s", config.CacheAddrs)
 		}
 	}
 
@@ -310,11 +315,18 @@ func Validate(config Config) error {
 		"consul":    true,
 		"nacos":     true,
 	}
-	if config.ServiceDiscovery != "" && !validDiscoveryTypes[config.ServiceDiscovery] {
-		return fmt.Errorf("invalid service_discovery: %s, must be etcd, zookeeper, consul, or nacos", config.ServiceDiscovery)
+	if config.ServiceDiscoveryType != "" && !validDiscoveryTypes[config.ServiceDiscoveryType] {
+		return fmt.Errorf("invalid service_discovery_type: %s, must be etcd, zookeeper, consul, or nacos", config.ServiceDiscoveryType)
 	}
-	if config.ServiceDiscovery != "" && !isValidAddrs(config.ServiceDiscoveryAddrs) {
+	if config.ServiceDiscoveryType != "" && !isValidAddrs(config.ServiceDiscoveryAddrs) {
 		return fmt.Errorf("invalid service_discovery_addrs: %s", config.ServiceDiscoveryAddrs)
+	}
+
+	if config.DynamicConfigType != "" && !validDiscoveryTypes[config.DynamicConfigType] {
+		return fmt.Errorf("invalid dynamic_config_type: %s, must be etcd, zookeeper, consul, or nacos", config.DynamicConfigType)
+	}
+	if config.DynamicConfigType != "" && !isValidAddrs(config.DynamicConfigAddrs) {
+		return fmt.Errorf("invalid dynamic_config_addrs: %s", config.DynamicConfigAddrs)
 	}
 
 	if config.RateLimitQPS <= 0 {
@@ -324,12 +336,11 @@ func Validate(config Config) error {
 		return fmt.Errorf("rate_limit_burst must be positive: %d", config.RateLimitBurst)
 	}
 
-	if len(config.APIKeys) == 0 {
-		return fmt.Errorf("api_keys must not be empty")
-	}
-	for _, key := range config.APIKeys {
-		if key == "" {
-			return fmt.Errorf("api_keys contain empty key")
+	if len(config.APIKeys) > 0 {
+		for _, key := range config.APIKeys {
+			if key == "" {
+				return fmt.Errorf("api_keys contain empty key")
+			}
 		}
 	}
 
@@ -362,14 +373,14 @@ func MergeWithFlags(config Config, flags map[string]interface{}) Config {
 	if v, ok := flags["grpc-port"].(string); ok && v != "" {
 		config.GRPCPort = v
 	}
-	if v, ok := flags["redis-addrs"].(string); ok && v != "" {
-		config.RedisAddrs = v
+	if v, ok := flags["cache-addrs"].(string); ok && v != "" {
+		config.CacheAddrs = v
 	}
-	if v, ok := flags["etcd-addrs"].(string); ok && v != "" {
-		config.EtcdAddrs = v
+	if v, ok := flags["cache-username"].(string); ok && v != "" {
+		config.CacheUsername = v
 	}
-	if v, ok := flags["memcache-addrs"].(string); ok && v != "" {
-		config.MemcacheAddrs = v
+	if v, ok := flags["cache-password"].(string); ok && v != "" {
+		config.CachePassword = v
 	}
 	if v, ok := flags["cache-type"].(string); ok && v != "" {
 		config.CacheType = v
@@ -380,8 +391,57 @@ func MergeWithFlags(config Config, flags map[string]interface{}) Config {
 	if v, ok := flags["cache-key-prefix"].(string); ok && v != "" {
 		config.CacheKeyPrefix = v
 	}
-	if v, ok := flags["service-discovery"].(string); ok && v != "" {
-		config.ServiceDiscovery = v
+
+	/////
+	if v, ok := flags["enable-dynamic-config"].(bool); ok && !config.EnableDynamicConfig {
+		config.EnableDynamicConfig = v
+	}
+	if v, ok := flags["dynamic-config-type"].(string); ok && v != "" {
+		config.DynamicConfigType = v
+	}
+	if v, ok := flags["dynamic-config-addrs"].(string); ok && v != "" {
+		config.DynamicConfigAddrs = v
+	}
+	if v, ok := flags["dynamic-config-ttl"].(int); ok && v != 0 {
+		config.DynamicConfigTTL = v
+	}
+	if v, ok := flags["dynamic-config-keep-alive"].(int); ok && v != 0 {
+		config.DynamicConfigKeepAlive = v
+	}
+	if v, ok := flags["dynamic-config-max-retries"].(int); ok && v != 0 {
+		config.DynamicConfigMaxRetries = v
+	}
+	if v, ok := flags["dynamic-config-base-retry-delay"].(int); ok && v != 0 {
+		config.DynamicConfigBaseRetryDelay = v
+	}
+	if v, ok := flags["dynamic-config-username"].(string); ok && v != "" {
+		config.DynamicConfigUsername = v
+	}
+	if v, ok := flags["dynamic-config-password"].(string); ok && v != "" {
+		config.DynamicConfigPassword = v
+	}
+	if v, ok := flags["dynamic-config-tls-server-name"].(string); ok && v != "" {
+		config.DynamicConfigTlsServerName = v
+	}
+	if v, ok := flags["dynamic-config-tls-address"].(string); ok && v != "" {
+		config.DynamicConfigTlsAddress = v
+	}
+	if v, ok := flags["dynamic-config-tls-cert-file"].(string); ok && v != "" {
+		config.DynamicConfigTlsCertFile = v
+	}
+	if v, ok := flags["dynamic-config-tls-key-file"].(string); ok && v != "" {
+		config.DynamicConfigTlsKeyFile = v
+	}
+	if v, ok := flags["dynamic-config-tls-ca-file"].(string); ok && v != "" {
+		config.DynamicConfigTlsCaFile = v
+	}
+
+	/////
+	if v, ok := flags["enable-service-discovery"].(bool); ok && !config.EnableServiceDiscovery {
+		config.EnableServiceDiscovery = v
+	}
+	if v, ok := flags["service-discovery-type"].(string); ok && v != "" {
+		config.ServiceDiscoveryType = v
 	}
 	if v, ok := flags["service-discovery-addrs"].(string); ok && v != "" {
 		config.ServiceDiscoveryAddrs = v
@@ -419,6 +479,8 @@ func MergeWithFlags(config Config, flags map[string]interface{}) Config {
 	if v, ok := flags["service-discovery-tls-ca-file"].(string); ok && v != "" {
 		config.ServiceDiscoveryTlsCaFile = v
 	}
+
+	///////
 	if v, ok := flags["rate-limit-qps"].(int); ok && v != 0 {
 		config.RateLimitQPS = v
 	}
@@ -431,12 +493,7 @@ func MergeWithFlags(config Config, flags map[string]interface{}) Config {
 	if v, ok := flags["log-level"].(string); ok && v != "" {
 		config.LogLevel = v
 	}
-	if v, ok := flags["enable-dynamic-config"].(bool); ok && !config.EnableDynamicConfig {
-		config.EnableDynamicConfig = v
-	}
-	if v, ok := flags["enable-service-discovery"].(bool); ok && !config.EnableServiceDiscovery {
-		config.EnableServiceDiscovery = v
-	}
+
 	if v, ok := flags["enable-cors"].(bool); ok && !config.EnableCors {
 		config.EnableCors = v
 	}
@@ -448,20 +505,16 @@ func DefaultConfig() Config {
 		ServiceName:            "go-captcha-service",
 		HTTPPort:               "8080",
 		GRPCPort:               "50051",
-		RedisAddrs:             "localhost:6379",
-		EtcdAddrs:              "localhost:2379",
-		MemcacheAddrs:          "localhost:11211",
 		CacheType:              "memory",
+		CacheAddrs:             "",
 		CacheTTL:               60,
 		CacheKeyPrefix:         "GO_CAPTCHA_DATA:",
 		EnableDynamicConfig:    false,
 		EnableServiceDiscovery: false,
-		ServiceDiscovery:       "",
-		ServiceDiscoveryAddrs:  "localhost:2379",
 		RateLimitQPS:           1000,
 		RateLimitBurst:         1000,
-		EnableCors:             false,
-		APIKeys:                []string{"my-secret-key-123"},
+		EnableCors:             true,
+		APIKeys:                make([]string, 0),
 		LogLevel:               "info",
 	}
 }

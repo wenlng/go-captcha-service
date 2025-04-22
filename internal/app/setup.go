@@ -29,7 +29,7 @@ func setupServiceDiscovery(dCfg *config.DynamicConfig, logger *zap.Logger) (serv
 	}
 
 	var sdType servicediscovery.ServiceDiscoveryType = servicediscovery.ServiceDiscoveryTypeNone
-	switch cfg.ServiceDiscovery {
+	switch cfg.ServiceDiscoveryType {
 	case ServiceDiscoveryTypeEtcd:
 		sdType = servicediscovery.ServiceDiscoveryTypeEtcd
 		break
@@ -128,7 +128,7 @@ func setupDynamicConfig(appDynaCfg *config.DynamicConfig, captDynaCfg *config2.D
 	}
 
 	var sdType provider.ProviderType
-	switch appCfg.ServiceDiscovery {
+	switch appCfg.ServiceDiscoveryType {
 	case ServiceDiscoveryTypeEtcd:
 		sdType = provider.ProviderTypeEtcd
 		break
@@ -145,17 +145,17 @@ func setupDynamicConfig(appDynaCfg *config.DynamicConfig, captDynaCfg *config2.D
 
 	providerCfg := provider.ProviderConfig{
 		Type:      sdType,
-		Endpoints: strings.Split(appCfg.ServiceDiscoveryAddrs, ","),
-		Username:  appCfg.ServiceDiscoveryUsername,
-		Password:  appCfg.ServiceDiscoveryPassword,
+		Endpoints: strings.Split(appCfg.DynamicConfigAddrs, ","),
+		Username:  appCfg.DynamicConfigUsername,
+		Password:  appCfg.DynamicConfigPassword,
 	}
-	if appCfg.ServiceDiscoveryTlsCertFile != "" && appCfg.ServiceDiscoveryTlsKeyFile != "" && appCfg.ServiceDiscoveryTlsCaFile != "" {
+	if appCfg.DynamicConfigTlsCertFile != "" && appCfg.DynamicConfigTlsKeyFile != "" && appCfg.DynamicConfigTlsCaFile != "" {
 		providerCfg.TlsConfig = &common.TLSConfig{
-			Address:    appCfg.ServiceDiscoveryTlsAddress,
-			CertFile:   appCfg.ServiceDiscoveryTlsCertFile,
-			KeyFile:    appCfg.ServiceDiscoveryTlsKeyFile,
-			CAFile:     appCfg.ServiceDiscoveryTlsCaFile,
-			ServerName: appCfg.ServiceDiscoveryTlsServerName,
+			Address:    appCfg.DynamicConfigTlsAddress,
+			CertFile:   appCfg.DynamicConfigTlsCertFile,
+			KeyFile:    appCfg.DynamicConfigTlsKeyFile,
+			CAFile:     appCfg.DynamicConfigTlsCaFile,
+			ServerName: appCfg.DynamicConfigTlsServerName,
 		}
 	}
 
@@ -306,7 +306,7 @@ func setupLoggerLevel(logger *zap.Logger, level string) {
 
 // setupHealthCheck performs a health check on HTTP and gRPC servers
 func setupHealthCheck(httpAddr, grpcAddr string) error {
-	resp, err := http.Get("http://localhost" + httpAddr + "/read?key=test")
+	resp, err := http.Get("http://localhost" + httpAddr + "/status/health")
 	if err != nil || resp.StatusCode != http.StatusNotFound {
 		return fmt.Errorf("HTTP health check failed: %v", err)
 	}
@@ -330,9 +330,9 @@ func setupCacheManager(dcfg *config.DynamicConfig, logger *zap.Logger) (*cache.C
 
 	cacheMgr, err := cache.NewCacheManager(&cache.CacheMgrParams{
 		Type:          cache.CacheType(cfg.CacheType),
-		RedisAddrs:    cfg.RedisAddrs,
-		MemCacheAddrs: cfg.MemcacheAddrs,
-		EtcdAddrs:     cfg.EtcdAddrs,
+		CacheAddrs:    cfg.CacheAddrs,
+		CacheUsername: cfg.CacheUsername,
+		CachePassword: cfg.CachePassword,
 		KeyPrefix:     cfg.CacheKeyPrefix,
 		Ttl:           ttl,
 		CleanInt:      cleanInt,
@@ -345,9 +345,9 @@ func setupCacheManager(dcfg *config.DynamicConfig, logger *zap.Logger) (*cache.C
 		newCfg := dnCfg.Get()
 		err = cacheMgr.Setup(&cache.CacheMgrParams{
 			Type:          cache.CacheType(newCfg.CacheType),
-			RedisAddrs:    newCfg.RedisAddrs,
-			MemCacheAddrs: newCfg.MemcacheAddrs,
-			EtcdAddrs:     newCfg.EtcdAddrs,
+			CacheAddrs:    cfg.CacheAddrs,
+			CacheUsername: cfg.CacheUsername,
+			CachePassword: cfg.CachePassword,
 			KeyPrefix:     newCfg.CacheKeyPrefix,
 			Ttl:           ttl,
 			CleanInt:      cleanInt,
