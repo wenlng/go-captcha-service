@@ -1,5 +1,5 @@
 # Build phase
-FROM --platform=$BUILDPLATFORM golang:1.21 AS builder
+FROM --platform=$BUILDPLATFORM golang:1.23 AS builder
 
 WORKDIR /app
 
@@ -10,7 +10,7 @@ COPY . .
 
 ARG TARGETOS
 ARG TARGETARCH
-RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -ldflags="-w -s" -o go-captcha-service ./cmd/go-captcha-service
+RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -ldflags="-w -s" -v -a -trimpath -o go-captcha-service ./cmd/go-captcha-service
 
 # Run phase (default binary)
 FROM scratch AS binary

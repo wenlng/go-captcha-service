@@ -298,18 +298,19 @@ func (a *App) startHTTPServer(svcCtx *common.SvcContext, cfg *config.Config) err
 
 	mwChain := middleware.NewChainHTTP(middlewares...)
 
-	http.Handle("/v1/get-data", mwChain.Then(handlers.GetDataHandler))
-	http.Handle("/v1/check-data", mwChain.Then(handlers.CheckDataHandler))
-	http.Handle("/v1/check-status", mwChain.Then(handlers.CheckStatusHandler))
-	http.Handle("/v1/get-status-info", mwChain.Then(handlers.GetStatusInfoHandler))
-	http.Handle("/v1/del-status-info", mwChain.Then(handlers.DelStatusInfoHandler))
+	http.Handle("/api/v1/get-data", mwChain.Then(handlers.GetDataHandler))
+	http.Handle("/api/v1/check-data", mwChain.Then(handlers.CheckDataHandler))
+	http.Handle("/api/v1/check-status", mwChain.Then(handlers.CheckStatusHandler))
+	http.Handle("/api/v1/get-status-info", mwChain.Then(handlers.GetStatusInfoHandler))
+	http.Handle("/api/v1/del-status-info", mwChain.Then(handlers.DelStatusInfoHandler))
+	http.Handle("/api/v1/status/health", mwChain.Then(handlers.HealthStatusHandler))
 	http.Handle("/rate-limit", mwChain.Then(middleware.RateLimitHandler(a.limiter, a.logger)))
 
-	http.Handle("/v1/manage/upload-resource", mwChain.Then(handlers.UploadResourceHandler))
-	http.Handle("/v1/manage/delete-resource", mwChain.Then(handlers.DeleteResourceHandler))
-	http.Handle("/v1/manage/get-resource-list", mwChain.Then(handlers.GetResourceListHandler))
-	http.Handle("/v1/manage/get-config", mwChain.Then(handlers.GetGoCaptchaConfigHandler))
-	http.Handle("/v1/manage/update-hot-config", mwChain.Then(handlers.UpdateHotGoCaptchaConfigHandler))
+	http.Handle("/api/v1/manage/upload-resource", mwChain.Then(handlers.UploadResourceHandler))
+	http.Handle("/api/v1/manage/delete-resource", mwChain.Then(handlers.DeleteResourceHandler))
+	http.Handle("/api/v1/manage/get-resource-list", mwChain.Then(handlers.GetResourceListHandler))
+	http.Handle("/api/v1/manage/get-config", mwChain.Then(handlers.GetGoCaptchaConfigHandler))
+	http.Handle("/api/v1/manage/update-hot-config", mwChain.Then(handlers.UpdateHotGoCaptchaConfigHandler))
 
 	a.httpServer = &http.Server{
 		Addr: ":" + cfg.HTTPPort,

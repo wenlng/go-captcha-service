@@ -50,6 +50,13 @@ func NewHTTPHandlers(svcCtx *common.SvcContext) *HTTPHandlers {
 	}
 }
 
+// HealthStatusHandler .
+func (h *HTTPHandlers) HealthStatusHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	resp := &adapt.CaptNormalDataResponse{Code: http.StatusOK, Message: "success"}
+	json.NewEncoder(w).Encode(helper.Marshal(resp))
+}
+
 // GetDataHandler .
 func (h *HTTPHandlers) GetDataHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")

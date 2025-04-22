@@ -2,7 +2,7 @@
 
 # Variables
 BINARY_NAME=go-captcha-service
-VERSION?=0.1.0
+VERSION?=0.0.1
 BUILD_DIR=build
 PLATFORMS=darwin/amd64 darwin/arm64 linux/amd64 linux/arm64 linux/arm/v7 windows/amd64
 DOCKER_IMAGE?=wenlng/go-captcha-service
@@ -116,11 +116,24 @@ docker-build:
 .PHONY: docker-build-multi
 docker-build-multi:
 	docker buildx build \
-		--platform linux/amd64,linux/arm64,linux/arm/v7 \
-		-t $(DOCKER_IMAGE):latest \
-		-t $(DOCKER_IMAGE):amd64 \
-		-t $(DOCKER_IMAGE):arm64 \
-		-t $(DOCKER_IMAGE):armv7 \
+		--platform linux/amd64,linux/arm64,linux/arm/v7,windows/amd64 \
+		-t $(DOCKER_IMAGE):$(VERSION) \
+		-t $(DOCKER_IMAGE):amd64-$(VERSION) \
+		-t $(DOCKER_IMAGE):arm64-$(VERSION) \
+		-t $(DOCKER_IMAGE):armv7-$(VERSION) \
+		--push .
+
+# Multi-architecture Docker build and push (binary)
+.PHONY: docker-proxy-build-multi
+docker-proxy-build-multi:
+	export http_proxy=http://127.0.0.1:7890
+	export https_proxy=http://127.0.0.1:7890
+	docker buildx build \
+		--platform linux/amd64,linux/arm64,linux/arm/v7,windows/amd64 \
+		-t $(DOCKER_IMAGE):$(VERSION) \
+		-t $(DOCKER_IMAGE):amd64-$(VERSION) \
+		-t $(DOCKER_IMAGE):arm64-$(VERSION) \
+		-t $(DOCKER_IMAGE):armv7-$(VERSION) \
 		--push .
 
 # Run a local Docker container (binary)

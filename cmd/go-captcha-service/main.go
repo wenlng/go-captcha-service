@@ -17,6 +17,7 @@ import (
 )
 
 func main() {
+	fmt.Fprintf(os.Stdout, "[Main] Starting the application ...")
 	a, err := app.NewApp()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "[Main] Failed to initialize app: %v\n", err)
@@ -34,6 +35,7 @@ func main() {
 	// Handle termination signals
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
+	fmt.Fprintf(os.Stdout, "[Main] The application start successfully")
 	<-sigCh
 
 	a.Shutdown()
