@@ -1,0 +1,8 @@
+.git
+.gitignore
+*.md
+*.log
+tmp/
+vendor/
+*.swp
+*.swo

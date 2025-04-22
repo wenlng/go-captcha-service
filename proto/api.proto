@@ -1,0 +1,56 @@
+syntax = "proto3";
+
+package gocaptcha;
+
+option go_package = "./proto";
+
+// GoCaptchaService provides cache operations
+service GoCaptchaService {
+  rpc GetData(GetDataRequest) returns (GetDataResponse) {}
+  rpc CheckData(CheckDataRequest) returns (CheckDataResponse) {}
+  rpc CheckStatus(StatusInfoRequest) returns (StatusInfoResponse) {}
+  rpc GetStatusInfo(StatusInfoRequest) returns (StatusInfoResponse) {}
+  rpc DelStatusInfo(StatusInfoRequest) returns (StatusInfoResponse) {}
+}
+
+message GetDataRequest {
+  string id = 1;
+}
+
+message GetDataResponse {
+  int32 code = 1;
+  string message = 2;
+  string id = 3;
+  string captchaKey = 4;
+  string masterImageBase64 = 5;
+  string thumbImageBase64 = 6;
+  int32 masterWidth = 7;
+  int32 masterHeight = 8;
+  int32 thumbWidth = 9;
+  int32 thumbHeight = 10;
+  int32 thumbSize = 11;
+  int32 displayX = 12;
+  int32 displayY = 13;
+}
+
+message CheckDataRequest {
+  string id = 1;
+  string captchaKey = 2;
+  string value = 3;
+}
+
+message CheckDataResponse {
+  int32 code = 1;
+  string message = 2;
+  string data = 3;
+}
+
+message StatusInfoRequest {
+  string captchaKey = 1;
+}
+
+message StatusInfoResponse {
+  int32 code = 1;
+  string message = 2;
+  string data = 3;
+}

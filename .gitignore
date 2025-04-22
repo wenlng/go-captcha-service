@@ -10,9 +10,11 @@
 
 # Test binary, built with `go test -c`
 *.test
+*.cache
 
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
+*build
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
@@ -23,3 +25,31 @@ go.work.sum
 
 # env file
 .env
+
+# Other
+.cache/
+unpackage
+.idea/
+.DS_Store
+.vscode
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.node
+!.vscode/extensions.json
+
+logs
+*.log
+
+gocaptcha.dd.dev.json
+
+# resources
+resources/*
+!resources/gocaptcha
+resources/gocaptcha/fonts/*
+resources/gocaptcha/master_images/*
+resources/gocaptcha/shape_images/*
+resources/gocaptcha/thumb_images/*
+resources/gocaptcha/tile_images/*

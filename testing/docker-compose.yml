@@ -1,0 +1,68 @@
+version: '3'
+services:
+  captcha-service-1:
+    image: wenlng/go-captcha-service:latest
+    ports:
+      - "8080:8080"
+      - "50051:50051"
+    volumes:
+      - ./config.json:/app/config.json
+      - ./gocaptcha.json:/app/gocaptcha.json
+      - ./resources/gocaptcha:/app/resources/gocaptcha
+    environment:
+      - CONFIG=config.json
+      - GO_CAPTCHA_CONFIG=gocaptcha.json
+      - SERVICE_NAME=go-captcha-service
+      - CACHE_TYPE=redis
+      - CACHE_ADDRS=localhost:6379
+      - ENABLE_DYNAMIC_CONFIG=true
+      - DYNAMIC_CONFIG_TYPE=etcd
+      - DYNAMIC_CONFIG_ADDRS=localhost:2379
+      - ENABLE_SERVICE_DISCOVERY=true
+      - SERVICE_DISCOVERY_TYPE=etcd
+      - SERVICE_DISCOVERY_ADDRS=localhost:2379
+    depends_on:
+      - etcd
+      - redis
+    restart: unless-stopped
+
+  captcha-service-2:
+    image: wenlng/go-captcha-service:latest
+    ports:
+      - "8081:8080"
+      - "50052:50051"
+    volumes:
+      - ./config.json:/app/config.json
+      - ./gocaptcha.json:/app/gocaptcha.json
+      - ./resources/gocaptcha:/app/resources/gocaptcha
+    environment:
+      - CONFIG=config.json
+      - GO_CAPTCHA_CONFIG=gocaptcha.json
+      - SERVICE_NAME=go-captcha-service
+      - CACHE_TYPE=redis
+      - CACHE_ADDRS=localhost:6379
+      - ENABLE_DYNAMIC_CONFIG=true
+      - DYNAMIC_CONFIG_TYPE=etcd
+      - DYNAMIC_CONFIG_ADDRS=localhost:2379
+      - ENABLE_SERVICE_DISCOVERY=true
+      - SERVICE_DISCOVERY_TYPE=etcd
+      - SERVICE_DISCOVERY_ADDRS=localhost:2379
+    depends_on:
+      - etcd
+      - redis
+    restart: unless-stopped
+
+  etcd:
+    image: bitnami/etcd:latest
+    ports:
+      - "2379:2379"
+    environment:
+      - ALLOW_NONE_AUTHENTICATION=yes
+    privileged: true
+    restart: unless-stopped
+
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
