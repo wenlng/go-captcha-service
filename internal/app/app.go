@@ -47,15 +47,6 @@ type App struct {
 	captcha        *gocaptcha.GoCaptcha
 }
 
-// ServiceDiscovery .
-const (
-	ServiceDiscoveryTypeEtcd      string = "etcd"
-	ServiceDiscoveryTypeZookeeper        = "zookeeper"
-	ServiceDiscoveryTypeConsul           = "consul"
-	ServiceDiscoveryTypeNacos            = "nacos"
-	ServiceDiscoveryTypeNone             = "none"
-)
-
 // NewApp initializes the application
 func NewApp() (*App, error) {
 
@@ -113,70 +104,71 @@ func NewApp() (*App, error) {
 	flag.Parse()
 
 	// Read environment variables
-	if *serviceName == "" {
-		if v, exists := os.LookupEnv("CONFIG"); exists {
-			*configFile = v
-		}
-		if v, exists := os.LookupEnv("GO_CAPTCHA_CONFIG"); exists {
-			*gocaptchaConfigFile = v
-		}
+	if v, exists := os.LookupEnv("CONFIG"); exists {
+		*configFile = v
+	}
+	if v, exists := os.LookupEnv("GO_CAPTCHA_CONFIG"); exists {
+		*gocaptchaConfigFile = v
+	}
 
-		if v, exists := os.LookupEnv("SERVICE_NAME"); exists {
-			*serviceName = v
-		}
-		if v, exists := os.LookupEnv("HTTP_PORT"); exists {
-			*httpPort = v
-		}
-		if v, exists := os.LookupEnv("GRPC_PORT"); exists {
-			*grpcPort = v
-		}
-		if v, exists := os.LookupEnv("API_KEYS"); exists {
-			*apiKeys = v
-		}
-		if v, exists := os.LookupEnv("CACHE_TYPE"); exists {
-			*cacheType = v
-		}
-		if v, exists := os.LookupEnv("CACHE_ADDRS"); exists {
-			*cacheAddrs = v
-		}
-		if v, exists := os.LookupEnv("CACHE_USERNAME"); exists {
-			*cacheUsername = v
-		}
-		if v, exists := os.LookupEnv("CACHE_PASSWORD"); exists {
-			*cachePassword = v
-		}
+	if v, exists := os.LookupEnv("SERVICE_NAME"); exists {
+		*serviceName = v
+	}
+	if v, exists := os.LookupEnv("HTTP_PORT"); exists {
+		*httpPort = v
+	}
+	if v, exists := os.LookupEnv("GRPC_PORT"); exists {
+		*grpcPort = v
+	}
+	if v, exists := os.LookupEnv("API_KEYS"); exists {
+		*apiKeys = v
+	}
+	if v, exists := os.LookupEnv("CACHE_TYPE"); exists {
+		*cacheType = v
+	}
+	if v, exists := os.LookupEnv("CACHE_ADDRS"); exists {
+		*cacheAddrs = v
+	}
+	if v, exists := os.LookupEnv("CACHE_USERNAME"); exists {
+		*cacheUsername = v
+	}
+	if v, exists := os.LookupEnv("CACHE_PASSWORD"); exists {
+		*cachePassword = v
+	}
+	if v, exists := os.LookupEnv("LOG_LEVEL"); exists {
+		*logLevel = v
+	}
 
-		if v, exists := os.LookupEnv("ENABLE_DYNAMIC_CONFIG"); exists {
-			*enableDynamicConfig = v == "true"
-		}
-		if v, exists := os.LookupEnv("DYNAMIC_CONFIG_TYPE"); exists {
-			*dynamicConfigType = v
-		}
-		if v, exists := os.LookupEnv("DYNAMIC_CONFIG_ADDRS"); exists {
-			*dynamicConfigAddrs = v
-		}
-		if v, exists := os.LookupEnv("DYNAMIC_CONFIG_USERNAME"); exists {
-			*dynamicConfigUsername = v
-		}
-		if v, exists := os.LookupEnv("DYNAMIC_CONFIG_PASSWORD"); exists {
-			*dynamicConfigPassword = v
-		}
+	if v, exists := os.LookupEnv("ENABLE_DYNAMIC_CONFIG"); exists {
+		*enableDynamicConfig = v == "true"
+	}
+	if v, exists := os.LookupEnv("DYNAMIC_CONFIG_TYPE"); exists {
+		*dynamicConfigType = v
+	}
+	if v, exists := os.LookupEnv("DYNAMIC_CONFIG_ADDRS"); exists {
+		*dynamicConfigAddrs = v
+	}
+	if v, exists := os.LookupEnv("DYNAMIC_CONFIG_USERNAME"); exists {
+		*dynamicConfigUsername = v
+	}
+	if v, exists := os.LookupEnv("DYNAMIC_CONFIG_PASSWORD"); exists {
+		*dynamicConfigPassword = v
+	}
 
-		if v, exists := os.LookupEnv("ENABLE_SERVICE_DISCOVERY"); exists {
-			*enableServiceDiscovery = v == "true"
-		}
-		if v, exists := os.LookupEnv("SERVICE_DISCOVERY_TYPE"); exists {
-			*serviceDiscoveryType = v
-		}
-		if v, exists := os.LookupEnv("SERVICE_DISCOVERY_ADDRS"); exists {
-			*serviceDiscoveryAddrs = v
-		}
-		if v, exists := os.LookupEnv("SERVICE_DISCOVERY_USERNAME"); exists {
-			*serviceDiscoveryUsername = v
-		}
-		if v, exists := os.LookupEnv("SERVICE_DISCOVERY_PASSWORD"); exists {
-			*serviceDiscoveryPassword = v
-		}
+	if v, exists := os.LookupEnv("ENABLE_SERVICE_DISCOVERY"); exists {
+		*enableServiceDiscovery = v == "true"
+	}
+	if v, exists := os.LookupEnv("SERVICE_DISCOVERY_TYPE"); exists {
+		*serviceDiscoveryType = v
+	}
+	if v, exists := os.LookupEnv("SERVICE_DISCOVERY_ADDRS"); exists {
+		*serviceDiscoveryAddrs = v
+	}
+	if v, exists := os.LookupEnv("SERVICE_DISCOVERY_USERNAME"); exists {
+		*serviceDiscoveryUsername = v
+	}
+	if v, exists := os.LookupEnv("SERVICE_DISCOVERY_PASSWORD"); exists {
+		*serviceDiscoveryPassword = v
 	}
 
 	// Initialize logger
@@ -402,7 +394,7 @@ func (a *App) startHTTPServer(svcCtx *common.SvcContext, cfg *config.Config) err
 
 	http.Handle("/status/health", mwChain.Then(handlers.HealthStatusHandler))
 	http.Handle("/rate-limit", mwChain.Then(middleware.RateLimitHandler(a.limiter, a.logger)))
-	
+
 	http.Handle("/api/v1/public/get-data", mwChain.Then(handlers.GetDataHandler))
 	http.Handle("/api/v1/public/check-data", mwChain.Then(handlers.CheckDataHandler))
 	http.Handle("/api/v1/public/check-status", mwChain.Then(handlers.CheckStatusHandler))

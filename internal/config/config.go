@@ -14,6 +14,14 @@ import (
 	"github.com/wenlng/go-captcha-service/internal/helper"
 )
 
+// ServiceDiscovery .
+const (
+	DiscoveryTypeEtcd      string = "etcd"
+	DiscoveryTypeZookeeper        = "zookeeper"
+	DiscoveryTypeConsul           = "consul"
+	DiscoveryTypeNacos            = "nacos"
+)
+
 // Config defines the configuration structure for the application
 type Config struct {
 	ConfigVersion  int64    `json:"config_version"`

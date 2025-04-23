@@ -68,8 +68,8 @@ jobs:
           platforms: linux/amd64,linux/arm64,linux/arm/v7,windows/amd64
           push: true
           tags: |
-            ${{ secrets.DOCKER_USERNAME }}/go-captcha-service:0.0.1
-            ${{ secrets.DOCKER_USERNAME }}/go-captcha-service:amd64-0.0.1
-            ${{ secrets.DOCKER_USERNAME }}/go-captcha-service:arm64-0.0.1
-            ${{ secrets.DOCKER_USERNAME }}/go-captcha-service:armv7-0.0.1
+            ${{ secrets.DOCKER_USERNAME }}/go-captcha-service:1.0.1
+            ${{ secrets.DOCKER_USERNAME }}/go-captcha-service:amd64-1.0.1
+            ${{ secrets.DOCKER_USERNAME }}/go-captcha-service:arm64-1.0.1
+            ${{ secrets.DOCKER_USERNAME }}/go-captcha-service:armv7-1.0.1
             ${{ secrets.DOCKER_USERNAME }}/go-captcha-service:${{ github.ref_name }}

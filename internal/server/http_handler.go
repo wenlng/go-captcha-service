@@ -22,6 +22,8 @@ import (
 	"go.uber.org/zap"
 )
 
+const maxUploadSize = int64(10 << 20) // 10MB
+
 // HTTPHandlers manages HTTP request handlers
 type HTTPHandlers struct {
 	svcCtx     *common.SvcContext
@@ -313,7 +315,6 @@ func (h *HTTPHandlers) UploadResourceHandler(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	maxUploadSize := int64(10 << 20) // 10MB
 	r.Body = http.MaxBytesReader(w, r.Body, maxUploadSize)
 
 	// Parse multipart/form-data
