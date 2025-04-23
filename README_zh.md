@@ -24,7 +24,6 @@
 </div>
 
 <br/>
-<hr/>
 <br/>
 
 ## 周边项目
@@ -56,7 +55,7 @@
 - **分布式缓存**：支持 Memory、Redis、Etcd 和 Memcache，优化验证码数据存储。
 - **分布式动态配置**：通过 Etcd、Nacos、Zookeeper 或 Consul 实时更新配置。
 - **高可配置性**：支持自定义文本、字体、图片资源、验证码尺寸、生成规则等配置。
-- **高性能**：基于 Go 的并发模型，适合高流量场景，同时结合分布式架构部署，确保服务处于高可用、高性能、高响应的状态。
+- **高性能**：基于 Go 的并发模型，适合高流量场景，同时结合分布式架构部署，确保服务处于高可用、高性能的状态。
 - **跨平台**：支持二进制、命令行、PM2、Docker 和 Docker Compose 部署。
 
 <br/>
@@ -119,6 +118,7 @@ PM2 是 Node.js 进程守护管理工具，可用于管理 Go 服务，提供进
          SERVICE_NAME: 'go-captcha-service',
          CACHE_TYPE: 'redis',
          CACHE_ADDRS: 'localhost:6379',
+         LOG_LEVEL: 'error',
        },
        env_production: {
          CONFIG: 'config.json',
@@ -126,6 +126,7 @@ PM2 是 Node.js 进程守护管理工具，可用于管理 Go 服务，提供进
          SERVICE_NAME: 'go-captcha-service',
          CACHE_TYPE: 'redis',
          CACHE_ADDRS: 'localhost:6379',
+         LOG_LEVEL: 'error',
        }
      }]
    };
@@ -534,6 +535,7 @@ server {
 * HTTP_PORT: HTTP 服务监听端口。
 * GRPC_PORT: gRPC 服务监听端口。
 * API_KEYS: API 密钥，用于认证或授权。
+* `LOG_LEVEL`: Log level.
 
 缓存配置：
 * CACHE_TYPE: 缓存类型（如 redis、memcached、memory、etcd）。
@@ -881,11 +883,11 @@ server {
 ```
 <br/>
 
-##### 顶级字段
+> 顶级字段
 
 - `config_version` (整数)：配置文件版本号，用于分布动态配置管理，默认 `1`。
 
-##### resources 字段
+> resources 字段
 
 - `version` (字符串)：资源配置版本号，用于控制重新创建新的验证码实例，默认 `0.0.1`。
 - `char.languages.chinese` (字符串数组)：中文字符集，用于点击验证码的文本内容，默认空（默认取内置的资源）。
@@ -916,12 +918,12 @@ server {
 
 <br/>
 
-##### builder 字段
+#### builder 字段
 
 定义验证码生成样式，包含点击、形状点击、滑动、拖拽和旋转验证码的配置。
 
 
-###### click_config_maps
+#### click_config_maps
 
 定义文本点击验证码的配置，支持中英文和明暗主题，key为ID，在请求验证码API时传递，例如：`api/v1/public/get-data?id=click-default-ch`。
 
@@ -969,7 +971,7 @@ server {
 
 <br/>
 
-###### click_shape_config_maps
+#### click_shape_config_maps
 
 定义形状点击验证码的配置。
 
@@ -977,7 +979,7 @@ server {
 
 <br/>
 
-###### slide_config_maps
+#### slide_config_maps
 
 定义滑动验证码配置。
 
@@ -998,7 +1000,7 @@ server {
 
 <br/>
 
-###### drag_config_maps
+#### drag_config_maps
 
 定义拖拽验证码配置。
 
@@ -1019,7 +1021,7 @@ server {
 
 <br/>
 
-###### rotate_config_maps
+#### rotate_config_maps
 
 定义旋转验证码配置。
 
@@ -1043,14 +1045,16 @@ server {
 `gocaptcha.json` 热重载以每个配置项的 version 字段决定是否生效。
 
 `config.json` 热重载有效的字段如下：
-* cache_type
-* cahce_addrs
-* cache_ttl
-* cache_key_prefix
-* api_keys
-* log_level
-* rate_limit_qps
-* rate_limit_burst
+* `cache_type`
+* `cache_addrs`
+* `cache_username`
+* `cache_password`
+* `cache_ttl`
+* `cache_key_prefix`
+* `api_keys`
+* `log_level`
+* `rate_limit_qps`
+* `rate_limit_burst`
 
 
 ### 测试：
@@ -1059,7 +1063,7 @@ server {
 - 验证逻辑：测试不同输入的处理。
 - 服务发现：模拟 Etcd/Nacos/Zookeeper/Consul。
 - 缓存：测试 Memory/Redis/Etcd/Memcache。
-- 动态配置：测试 Nacos 配置更新。
+- 动态配置：测试 Etcd|Nacos|Zookeeper|Consul 配置更新。
 
 
 <br/>

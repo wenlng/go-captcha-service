@@ -531,6 +531,7 @@ Basic Configuration:
 * `HTTP_PORT`: HTTP service listening port.
 * `GRPC_PORT`: gRPC service listening port.
 * `API_KEYS`: API keys for authentication or authorization.
+* `LOG_LEVEL`: Log level.
 
 Cache Configuration:
 * `CACHE_TYPE`: Cache type (e.g., `redis`, `memcached`, `memory`, `etcd`).
@@ -883,7 +884,7 @@ The service uses two configuration files: `config.json` for service runtime para
 
 - `config_version` (integer): Configuration file version for distributed dynamic configuration management, default `1`.
 
-##### resources Field
+> resources
 
 - `version` (string): Resource configuration version to control CAPTCHA instance recreation, default `0.0.1`.
 - `char.languages.chinese` (string array): Chinese character set for click CAPTCHA text, default empty (uses built-in resources).
@@ -914,50 +915,50 @@ The service uses two configuration files: `config.json` for service runtime para
 
 <br/>
 
-##### builder Field
+> builder
 
 Defines CAPTCHA generation styles, including configurations for click, shape click, slide, drag, and rotate CAPTCHAs.
 
-###### click_config_maps
+#### click_config_maps
 
 Defines text click CAPTCHA configurations, supporting Chinese and English with light and dark themes. The key is the ID passed in the CAPTCHA API request, e.g., `api/v1/public/get-data?id=click-default-ch`.
 
 - `click-default-ch` (object): Default Chinese theme configuration.
-    - `version` (string): Configuration version to control CAPTCHA instance recreation, default `0.0.1`.
-      $
-    - `language` (string): Language, matches defined `char.languages`, e.g., `chinese` for Chinese.
-    - `master` (object): Main CAPTCHA image configuration.
-        - `image_size.width` (integer): Main image width, default `300`.
-        - `image_size.height` (integer): Main image height, default `200`.
-        - `range_length.min` (integer): Minimum number of CAPTCHA points, default `6`.
-        - `range_length.max` (integer): Maximum number of CAPTCHA points, default `7`.
-        - `range_angles` (object array): Text rotation angle ranges (degrees).
-            - Example: `{"min": 20, "max": 35}` for 20°-35°.
-        - `range_size.min` (integer): Minimum text size (pixels), default `26`.
-        - `range_size.max` (integer): Maximum text size, default `32`.
-        - `range_colors` (string array): Text color list (hexadecimal).
-            - Example: `"#fde98e"`.
-        - `display_shadow` (boolean): Display text shadow, default `true`.
-        - `shadow_color` (string): Shadow color, default `#101010`.
-        - `shadow_point.x` (integer): Shadow offset X coordinate, default `-1` (auto-calculated).
-        - `shadow_point.y` (integer): Shadow offset Y coordinate, default `-1`.
-        - `image_alpha` (float): Image opacity (0-1), default `1`.
-        - `use_shape_original_color` (boolean): Use original shape color, default `true`.
-    - `thumb` (object): Thumbnail (prompt text) configuration.
-        - `image_size.width` (integer): Thumbnail width, default `150`.
-        - `image_size.height` (integer): Thumbnail height, default `40`.
-        - `range_verify_length.min` (integer): Minimum verification points, default `2`.
-        - `range_verify_length.max` (integer): Maximum verification points, default `4`.
-        - `disabled_range_verify_length` (boolean): Disable verification point limit, default `false`.
-        - `range_text_size.min` (integer): Minimum text size, default `22`.
-        - `range_text_size.max` (integer): Maximum text size, default `28`.
-        - `range_text_colors` (string array): Text color list.
-        - `range_background_colors` (string array): Background color list.
-        - `is_non_deform_ability` (boolean): Disable deformation effect, default `false`.
-        - `background_distort` (integer): Background distortion level, default `4`.
-        - `background_distort_alpha` (float): Background distortion opacity, default `1`.
-        - `background_circles_num` (integer): Number of background circle interference points, default `24`.
-        - `background_slim_line_num` (integer): Number of background slim line interferences, default `2`.
+- `version` (string): Configuration version to control CAPTCHA instance recreation, default `0.0.1`.
+$
+- `language` (string): Language, matches defined `char.languages`, e.g., `chinese` for Chinese.
+- `master` (object): Main CAPTCHA image configuration.
+- `image_size.width` (integer): Main image width, default `300`.
+- `image_size.height` (integer): Main image height, default `200`.
+- `range_length.min` (integer): Minimum number of CAPTCHA points, default `6`.
+- `range_length.max` (integer): Maximum number of CAPTCHA points, default `7`.
+- `range_angles` (object array): Text rotation angle ranges (degrees).
+- Example: `{"min": 20, "max": 35}` for 20°-35°.
+- `range_size.min` (integer): Minimum text size (pixels), default `26`.
+- `range_size.max` (integer): Maximum text size, default `32`.
+- `range_colors` (string array): Text color list (hexadecimal).
+- Example: `"#fde98e"`.
+- `display_shadow` (boolean): Display text shadow, default `true`.
+- `shadow_color` (string): Shadow color, default `#101010`.
+- `shadow_point.x` (integer): Shadow offset X coordinate, default `-1` (auto-calculated).
+- `shadow_point.y` (integer): Shadow offset Y coordinate, default `-1`.
+- `image_alpha` (float): Image opacity (0-1), default `1`.
+- `use_shape_original_color` (boolean): Use original shape color, default `true`.
+- `thumb` (object): Thumbnail (prompt text) configuration.
+- `image_size.width` (integer): Thumbnail width, default `150`.
+- `image_size.height` (integer): Thumbnail height, default `40`.
+- `range_verify_length.min` (integer): Minimum verification points, default `2`.
+- `range_verify_length.max` (integer): Maximum verification points, default `4`.
+- `disabled_range_verify_length` (boolean): Disable verification point limit, default `false`.
+- `range_text_size.min` (integer): Minimum text size, default `22`.
+- `range_text_size.max` (integer): Maximum text size, default `28`.
+- `range_text_colors` (string array): Text color list.
+- `range_background_colors` (string array): Background color list.
+- `is_non_deform_ability` (boolean): Disable deformation effect, default `false`.
+- `background_distort` (integer): Background distortion level, default `4`.
+- `background_distort_alpha` (float): Background distortion opacity, default `1`.
+- `background_circles_num` (integer): Number of background circle interference points, default `24`.
+- `background_slim_line_num` (integer): Number of background slim line interferences, default `2`.
 
 - `click-dark-ch` (object): Chinese dark theme configuration, similar to `click-default-ch`, but `thumb.range_text_colors` uses brighter colors for dark backgrounds.
 
@@ -967,7 +968,7 @@ Defines text click CAPTCHA configurations, supporting Chinese and English with l
 
 <br/>
 
-###### click_shape_config_maps
+#### click_shape_config_maps
 
 Defines shape click CAPTCHA configurations.
 
@@ -975,61 +976,61 @@ Defines shape click CAPTCHA configurations.
 
 <br/>
 
-###### slide_config_maps
+#### slide_config_maps
 
 Defines slide CAPTCHA configurations.
 
 - `slide-default` (object):
-    - `version` (string): Configuration version to control CAPTCHA instance recreation, default `0.0.1`.
-    - `master` (object): Main CAPTCHA image configuration.
-        - `image_size.width` (integer): Main image width, default `300`.
-        - `image_size.height` (integer): Main image height, default `200`.
-        - `image_alpha` (float): Image opacity (0-1), default `1`.
-    - `thumb` (object): Slider configuration.
-        - `range_graph_size.min` (integer): Minimum slider graphic size (pixels), default `60`.
-        - `range_graph_size.max` (integer): Maximum slider graphic size, default `70`.
-        - `range_graph_angles` (object array): Slider graphic rotation angle ranges (degrees).
-            - Example: `{"min": 20, "max": 35}`.
-        - `generate_graph_number` (integer): Number of slider graphics to generate, default `1`.
-        - `enable_graph_vertical_random` (boolean): Enable vertical random offset, default `false`.
-        - `range_dead_zone_directions` (string array): Slider dead zone directions, default `["left", "right"]`.
+- `version` (string): Configuration version to control CAPTCHA instance recreation, default `0.0.1`.
+- `master` (object): Main CAPTCHA image configuration.
+- `image_size.width` (integer): Main image width, default `300`.
+- `image_size.height` (integer): Main image height, default `200`.
+- `image_alpha` (float): Image opacity (0-1), default `1`.
+- `thumb` (object): Slider configuration.
+- `range_graph_size.min` (integer): Minimum slider graphic size (pixels), default `60`.
+- `range_graph_size.max` (integer): Maximum slider graphic size, default `70`.
+- `range_graph_angles` (object array): Slider graphic rotation angle ranges (degrees).
+- Example: `{"min": 20, "max": 35}`.
+- `generate_graph_number` (integer): Number of slider graphics to generate, default `1`.
+- `enable_graph_vertical_random` (boolean): Enable vertical random offset, default `false`.
+- `range_dead_zone_directions` (string array): Slider dead zone directions, default `["left", "right"]`.
 
 <br/>
 
-###### drag_config_maps
+#### drag_config_maps
 
 Defines drag CAPTCHA configurations.
 
 - `drag-default` (object):
-    - `version` (string): Configuration version to control CAPTCHA instance recreation, default `0.0.1`.
-    - `master` (object): Main CAPTCHA image configuration.
-        - `image_size.width` (integer): Main image width, default `300`.
-        - `image_size.height` (integer): Main image height, default `200`.
-        - `image_alpha` (float): Image opacity (0-1), default `1`.
-    - `thumb` (object): Drag graphic configuration.
-        - `range_graph_size.min` (integer): Minimum drag graphic size (pixels), default `60`.
-        - `range_graph_size.max` (integer): Maximum drag graphic size, default `70`.
-        - `range_graph_angles` (object array): Drag graphic rotation angle ranges (degrees).
-            - Example: `{"min": 0, "max": 0}` for no rotation.
-        - `generate_graph_number` (integer): Number of drag graphics to generate, default `2`.
-        - `enable_graph_vertical_random` (boolean): Enable vertical random offset, default `true`.
-        - `range_dead_zone_directions` (string array): Drag dead zone directions, default `["left", "right", "top", "bottom"]`.
+- `version` (string): Configuration version to control CAPTCHA instance recreation, default `0.0.1`.
+- `master` (object): Main CAPTCHA image configuration.
+- `image_size.width` (integer): Main image width, default `300`.
+- `image_size.height` (integer): Main image height, default `200`.
+- `image_alpha` (float): Image opacity (0-1), default `1`.
+- `thumb` (object): Drag graphic configuration.
+- `range_graph_size.min` (integer): Minimum drag graphic size (pixels), default `60`.
+- `range_graph_size.max` (integer): Maximum drag graphic size, default `70`.
+- `range_graph_angles` (object array): Drag graphic rotation angle ranges (degrees).
+- Example: `{"min": 0, "max": 0}` for no rotation.
+- `generate_graph_number` (integer): Number of drag graphics to generate, default `2`.
+- `enable_graph_vertical_random` (boolean): Enable vertical random offset, default `true`.
+- `range_dead_zone_directions` (string array): Drag dead zone directions, default `["left", "right", "top", "bottom"]`.
 
 <br/>
 
-###### rotate_config_maps
+#### rotate_config_maps
 
 Defines rotate CAPTCHA configurations.
 
 - `rotate-default` (object):
-    - `version` (string): Configuration version to control CAPTCHA instance recreation, default `0.0.1`.
-    - `master` (object): Main CAPTCHA image configuration.
-        - `image_square_size` (integer): Main image square side length (pixels), default `220`.
-    - `thumb` (object): Rotate graphic configuration.
-        - `range_angles` (object array): Rotation angle ranges (degrees).
-            - Example: `{"min": 30, "max": 330}` for 30°-330°.
-        - `range_image_square_sizes` (integer array): Rotate image square side length list, default `[140, 150, 160, 170]`.
-        - `image_alpha` (float): Image opacity (0-1), default `1`.
+- `version` (string): Configuration version to control CAPTCHA instance recreation, default `0.0.1`.
+- `master` (object): Main CAPTCHA image configuration.
+- `image_square_size` (integer): Main image square side length (pixels), default `220`.
+- `thumb` (object): Rotate graphic configuration.
+- `range_angles` (object array): Rotation angle ranges (degrees).
+- Example: `{"min": 30, "max": 330}` for 30°-330°.
+- `range_image_square_sizes` (integer array): Rotate image square side length list, default `[140, 150, 160, 170]`.
+- `image_alpha` (float): Image opacity (0-1), default `1`.
 
 <br/>
 <br/>
@@ -1040,6 +1041,8 @@ Hot reloading for `gocaptcha.json` is determined by the `version` field of each 
 Hot-reloadable fields in `config.json` include:
 * `cache_type`
 * `cache_addrs`
+* `cache_username`
+* `cache_password`
 * `cache_ttl`
 * `cache_key_prefix`
 * `api_keys`
@@ -1053,7 +1056,7 @@ Hot-reloadable fields in `config.json` include:
 - Verification Logic: Test handling of different inputs.
 - Service Discovery: Simulate Etcd/Nacos/Zookeeper/Consul.
 - Caching: Test Memory/Redis/Etcd/Memcache.
-- Dynamic Configuration: Test Nacos configuration updates.
+- Dynamic Configuration: Test Etcd|Nacos|Zookeeper|Consul configuration updates.
 
 <br/>
 <br/>

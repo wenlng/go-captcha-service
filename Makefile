@@ -2,7 +2,7 @@
 
 # Variables
 BINARY_NAME=go-captcha-service
-VERSION?=0.0.1
+VERSION?=1.0.1
 BUILD_DIR=build
 PLATFORMS=darwin/amd64 darwin/arm64 linux/amd64 linux/arm64 linux/arm/v7 windows/amd64
 DOCKER_IMAGE?=wenlng/go-captcha-service

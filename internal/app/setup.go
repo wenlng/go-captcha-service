@@ -30,16 +30,16 @@ func setupServiceDiscovery(dCfg *config.DynamicConfig, logger *zap.Logger) (serv
 
 	var sdType servicediscovery.ServiceDiscoveryType = servicediscovery.ServiceDiscoveryTypeNone
 	switch cfg.ServiceDiscoveryType {
-	case ServiceDiscoveryTypeEtcd:
+	case config.DiscoveryTypeEtcd:
 		sdType = servicediscovery.ServiceDiscoveryTypeEtcd
 		break
-	case ServiceDiscoveryTypeConsul:
+	case config.DiscoveryTypeConsul:
 		sdType = servicediscovery.ServiceDiscoveryTypeConsul
 		break
-	case ServiceDiscoveryTypeNacos:
+	case config.DiscoveryTypeNacos:
 		sdType = servicediscovery.ServiceDiscoveryTypeNacos
 		break
-	case ServiceDiscoveryTypeZookeeper:
+	case config.DiscoveryTypeZookeeper:
 		sdType = servicediscovery.ServiceDiscoveryTypeZookeeper
 		break
 	}
@@ -128,17 +128,17 @@ func setupDynamicConfig(appDynaCfg *config.DynamicConfig, captDynaCfg *config2.D
 	}
 
 	var sdType provider.ProviderType
-	switch appCfg.ServiceDiscoveryType {
-	case ServiceDiscoveryTypeEtcd:
+	switch appCfg.DynamicConfigType {
+	case config.DiscoveryTypeEtcd:
 		sdType = provider.ProviderTypeEtcd
 		break
-	case ServiceDiscoveryTypeConsul:
+	case config.DiscoveryTypeConsul:
 		sdType = provider.ProviderTypeConsul
 		break
-	case ServiceDiscoveryTypeNacos:
+	case config.DiscoveryTypeNacos:
 		sdType = provider.ProviderTypeNacos
 		break
-	case ServiceDiscoveryTypeZookeeper:
+	case config.DiscoveryTypeZookeeper:
 		sdType = provider.ProviderTypeZookeeper
 		break
 	}

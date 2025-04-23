@@ -44,6 +44,8 @@ type CacheManager struct {
 	mu         sync.RWMutex
 	cType      CacheType
 	cAddress   string
+	cUsername  string
+	cPassword  string
 	cKeyPrefix string
 	cTtl       time.Duration
 	cCleanInt  time.Duration
@@ -79,9 +81,14 @@ func (cm *CacheManager) Setup(arg *CacheMgrParams) error {
 	var curCache Cache
 	var err error
 	curAddrs := arg.CacheAddrs
+
 	switch arg.Type {
 	case CacheTypeRedis:
-		if cm.cAddress == curAddrs && cm.cKeyPrefix == arg.KeyPrefix && cm.cTtl == arg.Ttl {
+		if cm.cAddress == curAddrs &&
+			cm.cKeyPrefix == arg.KeyPrefix &&
+			cm.cTtl == arg.Ttl &&
+			cm.cUsername == arg.CacheUsername &&
+			cm.cPassword == arg.CachePassword {
 			return nil
 		}
 		curCache, err = NewRedisClient(arg.CacheAddrs, arg.KeyPrefix, arg.Ttl, arg.CacheUsername, arg.CachePassword)
@@ -89,12 +96,20 @@ func (cm *CacheManager) Setup(arg *CacheMgrParams) error {
 			return fmt.Errorf("failed to initialize Redis: %v", err)
 		}
 	case CacheTypeMemory:
-		if cm.cKeyPrefix == arg.KeyPrefix && cm.cTtl == arg.Ttl && cm.cCleanInt == arg.CleanInt {
+		if cm.cKeyPrefix == arg.KeyPrefix &&
+			cm.cTtl == arg.Ttl &&
+			cm.cCleanInt == arg.CleanInt &&
+			cm.cUsername == arg.CacheUsername &&
+			cm.cPassword == arg.CachePassword {
 			return nil
 		}
 		curCache = NewMemoryCache(arg.KeyPrefix, arg.Ttl, arg.CleanInt)
 	case CacheTypeEtcd:
-		if cm.cAddress == curAddrs && cm.cKeyPrefix == arg.KeyPrefix && cm.cTtl == arg.Ttl {
+		if cm.cAddress == curAddrs &&
+			cm.cKeyPrefix == arg.KeyPrefix &&
+			cm.cTtl == arg.Ttl &&
+			cm.cUsername == arg.CacheUsername &&
+			cm.cPassword == arg.CachePassword {
 			return nil
 		}
 		curCache, err = NewEtcdClient(arg.CacheAddrs, arg.KeyPrefix, arg.Ttl, arg.CacheUsername, arg.CachePassword)
@@ -102,7 +117,11 @@ func (cm *CacheManager) Setup(arg *CacheMgrParams) error {
 			return fmt.Errorf("failed to initialize Etcd: %v", err)
 		}
 	case CacheTypeMemcache:
-		if cm.cAddress == curAddrs && cm.cKeyPrefix == arg.KeyPrefix && cm.cTtl == arg.Ttl {
+		if cm.cAddress == curAddrs &&
+			cm.cKeyPrefix == arg.KeyPrefix &&
+			cm.cTtl == arg.Ttl &&
+			cm.cUsername == arg.CacheUsername &&
+			cm.cPassword == arg.CachePassword {
 			return nil
 		}
 		curCache, err = NewMemcacheClient(arg.CacheAddrs, arg.KeyPrefix, arg.Ttl, arg.CacheUsername, arg.CachePassword)
@@ -118,6 +137,8 @@ func (cm *CacheManager) Setup(arg *CacheMgrParams) error {
 	cm.cKeyPrefix = arg.KeyPrefix
 	cm.cTtl = arg.Ttl
 	cm.cCleanInt = arg.CleanInt
+	cm.cUsername = arg.CacheUsername
+	cm.cPassword = arg.CacheAddrs
 
 	cm.mu.Lock()
 	cm.cache = curCache
