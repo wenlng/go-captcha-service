@@ -97,6 +97,7 @@ func NewApp() (*App, error) {
 	rateLimitQPS := flag.Int("rate-limit-qps", 0, "Rate limit QPS")
 	rateLimitBurst := flag.Int("rate-limit-burst", 0, "Rate limit burst")
 	apiKeys := flag.String("api-keys", "", "Comma-separated API keys")
+	authApis := flag.String("auth-apis", "", "Comma-separated Auth APIs")
 	logLevel := flag.String("log-level", "", "Set log level: error, debug, warn, info")
 	healthCheckFlag := flag.Bool("health-check", false, "Run health check and exit")
 	enableCorsFlag := flag.Bool("enable-cors", false, "Enable cross-domain resources")
@@ -123,6 +124,9 @@ func NewApp() (*App, error) {
 	if v, exists := os.LookupEnv("API_KEYS"); exists {
 		*apiKeys = v
 	}
+	if v, exists := os.LookupEnv("AUTH_APIS"); exists {
+		*authApis = v
+	}
 	if v, exists := os.LookupEnv("CACHE_TYPE"); exists {
 		*cacheType = v
 	}
@@ -137,6 +141,10 @@ func NewApp() (*App, error) {
 	}
 	if v, exists := os.LookupEnv("LOG_LEVEL"); exists {
 		*logLevel = v
+	}
+
+	if v, exists := os.LookupEnv("ENABLE_CORS"); exists {
+		*enableCorsFlag = v == "true"
 	}
 
 	if v, exists := os.LookupEnv("ENABLE_DYNAMIC_CONFIG"); exists {
@@ -252,6 +260,7 @@ func NewApp() (*App, error) {
 		"rate-limit-burst": *rateLimitBurst,
 		"enable-cors":      *enableCorsFlag,
 		"api-keys":         *apiKeys,
+		"auth-apis":        *authApis,
 	})
 	if err = dc.Update(cfg); err != nil {
 		logger.Fatal("[App] Configuration validation failed", zap.Error(err))

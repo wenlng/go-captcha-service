@@ -66,14 +66,18 @@ func APIKeyMiddleware(dc *config.DynamicConfig, logger *zap.Logger) HTTPMiddlewa
 		return func(w http.ResponseWriter, r *http.Request) {
 			cfg := dc.Get()
 
-			if len(cfg.APIKeys) == 0 {
+			// Auth API
+			authApisMap := cfg.GetAuthAPIs()
+			if _, exists := authApisMap[r.URL.Path]; !exists {
 				next(w, r)
 				return
 			}
 
-			apiKeyMap := make(map[string]struct{})
-			for _, key := range cfg.APIKeys {
-				apiKeyMap[key] = struct{}{}
+			apiKeyMap := cfg.GetAPIKeys()
+			if len(apiKeyMap) == 0 {
+				logger.Warn("[HttpMiddleware] Missing API Key")
+				WriteError(w, http.StatusUnauthorized, "missing API Key")
+				return
 			}
 
 			apiKey := r.Header.Get("X-API-Key")

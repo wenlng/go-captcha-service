@@ -17,7 +17,7 @@ import (
 )
 
 func main() {
-	fmt.Fprintf(os.Stdout, "[Main] Starting the application ...")
+	fmt.Fprintf(os.Stdout, "[Main] Starting the application ... \n")
 	a, err := app.NewApp()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "[Main] Failed to initialize app: %v\n", err)
@@ -39,5 +39,5 @@ func main() {
 	<-sigCh
 
 	a.Shutdown()
-	fmt.Fprintf(os.Stderr, "[Main] App service exited")
+	fmt.Fprintf(os.Stderr, "[Main] App service exited \n")
 }

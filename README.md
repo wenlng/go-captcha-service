@@ -11,7 +11,7 @@
 
 <br/>
 
-`GoCaptcha Service` is a high-performance behavioral CAPTCHA service developed in Go, based on the **[go-captcha](https://github.com/wenlng/go-captcha)** core library. It supports multiple CAPTCHA modes including click, slide, drag, and rotate. The service provides HTTP and gRPC interfaces, integrates with various service discovery mechanisms (Etcd, Nacos, Zookeeper, Consul), distributed caching (Memory, Redis, Etcd, Memcache), and dynamic configuration. It supports both standalone and distributed deployments, aiming to provide a secure and flexible CAPTCHA solution for web applications.
+`GoCaptcha Service` is a high-performance behavioral CAPTCHA service developed in Go, based on the **[GoCaptcha](https://github.com/wenlng/go-captcha)** core library. It supports click, slide, drag, and rotate modes. It offers HTTP and gRPC interfaces, with integrated service discovery, distributed caching, and dynamic configuration.
 
 <br/>
 
@@ -23,7 +23,6 @@
 </div>
 
 <br/>
-<hr/>
 <br/>
 
 ## Related Projects
@@ -153,7 +152,7 @@ PM2 is a Node.js process manager that can manage Go services, providing process 
 <br/>
 <br/>
 
-#### Golang Source Code + Docker Deployment
+#### Source Code And Docker Deployment
 
 1. Create a `Dockerfile` for building from source:
 
@@ -257,7 +256,7 @@ Note: When dynamic configuration is enabled, both `config.json` and `gocaptcha.j
    ```json
    {
      "enable_dynamic_config": true,
-     "dynamic_config": "etcd",
+     "dynamic_config_type": "etcd",
      "dynamic_config_addrs": "localhost:2379"
    }
    ```
@@ -282,7 +281,7 @@ Note: When dynamic configuration is enabled, both `config.json` and `gocaptcha.j
    ```json
    {
      "enable_service_discovery": true,
-     "service_discovery": "etcd",
+     "service_discovery_type": "etcd",
      "service_discovery_addrs": "localhost:2379"
    }
    ```
@@ -388,45 +387,45 @@ docker-compose up -d
 
 * Get CAPTCHA
     ```shell
-    curl -H "X-API-Key:my-secret-key-123" http://127.0.0.1:8080/api/v1/public/get-data\?id\=click-default-ch
+    curl http://127.0.0.1:8080/api/v1/public/get-data\?id\=click-default-ch
     ```
 
 * Verify CAPTCHA
     ```shell
-    curl -X POST -H "X-API-Key:my-secret-key-123" -H "Content-Type:application/json" -d '{"id":"click-default-ch","captchaKey":"xxxx-xxxxx","value": "x1,y1,x2,y2"}' http://127.0.0.1:8181/api/v1/public/check-data
+    curl -X POST -H "Content-Type:application/json" -d '{"id":"click-default-ch","captchaKey":"xxxx-xxxxx","value": "x1,y1,x2,y2"}' http://127.0.0.1:8181/api/v1/public/check-data
     ```
 
 * Check Verification Status (`data == "ok"` indicates success)
   ```shell
-  curl -H "X-API-Key:my-secret-key-123" http://127.0.0.1:8080/api/v1/public/check-status\?captchaKey\=xxxx-xxxx
+  curl http://127.0.0.1:8080/api/v1/public/check-status\?captchaKey\=xxxx-xxxx
   ```
 
-* Get Status Info (not exposed to public networks)
+* Get Status Info
   ```shell
   curl -H "X-API-Key:my-secret-key-123" http://127.0.0.1:8080/api/v1/manage/get-status-info\?captchaKey\=xxxx-xxxx
   ```
 
-* Upload Resources (not exposed to public networks)
+* Upload Resources
   ```shell
   curl -X POST -H "X-API-Key:my-secret-key-123" -F "dirname=imagesdir" -F "files=@/path/to/file1.jpg" -F "files=@/path/to/file2.jpg" http://127.0.0.1:8080/api/v1/manage/upload-resource
   ```
 
-* Delete Resources (not exposed to public networks)
+* Delete Resources
   ```shell
   curl -X DELETE -H "X-API-Key:my-secret-key-123" http://127.0.0.1:8080/api/v1/manage/delete-resource?path=xxxxx.jpg
   ```
 
-* Get Resource File List (not exposed to public networks)
+* Get Resource File List
   ```shell
   curl -H "X-API-Key:my-secret-key-123" http://127.0.0.1:8080/api/v1/manage/get-resource-list?path=imagesdir
   ```
 
-* Get CAPTCHA Configuration (not exposed to public networks)
+* Get CAPTCHA Configuration
   ```shell
   curl -H "X-API-Key:my-secret-key-123" http://127.0.0.1:8080/api/v1/manage/get-config
   ```
 
-* Update CAPTCHA Configuration (non-file update, not exposed to public networks)
+* Update CAPTCHA Configuration
   ```shell
   curl -X POST -H "X-API-Key:my-secret-key-123" -H "Content-Type:application/json" -d '{"config_version":3,"resources":{ ... },"builder": { ... }}' http://127.0.0.1:8080/api/v1/manage/update-hot-config
   ```
@@ -437,12 +436,13 @@ For more details and gRPC APIs, refer to [go-captcha-service-sdk](https://github
 <br/>
 
 ## API Authentication Configuration
-If `api-keys` are configured in `config.json`, all HTTP and gRPC APIs require the `X-API-Key` header for authentication.
+To access the management interface /api/v1/manage, you need to configure api-keys in config.json. Subsequently, include the X-API-Key in the request headers for authentication when making HTTP or gRPC API calls.
 
-The `/api/v1/manage` APIs are not allowed to be exposed to public networks due to security concerns. Only the `/api/v1/public` routes should be publicly accessible. These can be proxied through web servers, reverse proxy servers, or gateway software such as Kong, Envoy, Tomcat, or Nginx.
+Although the built-in management API /api/v1/manage includes authentication, in a production environment, it is recommended to set api-keys with a length exceeding 128 characters and avoid exposing the management API to the public internet to prevent brute-force attacks.
 
-Example Nginx reverse proxy configuration for public routes:
+For enhanced security, you can configure routing rules to block access to /api/v1/manage. This can be achieved by proxying requests to internal services using web application servers, reverse proxy servers, or gateway software such as Kong, Envoy, Tomcat, or Nginx.
 
+Example of a public routing rule for Nginx reverse proxy:
 ```text
 server {
     listen 80;
@@ -532,6 +532,7 @@ Basic Configuration:
 * `GRPC_PORT`: gRPC service listening port.
 * `API_KEYS`: API keys for authentication or authorization.
 * `LOG_LEVEL`: Log level.
+* `ENABLE_CORS`: Enables Cross-Origin Resource Sharing, default "false".
 
 Cache Configuration:
 * `CACHE_TYPE`: Cache type (e.g., `redis`, `memcached`, `memory`, `etcd`).
@@ -673,7 +674,17 @@ The service uses two configuration files: `config.json` for service runtime para
 - `enable_cors` (boolean): Enables CORS, default `true`.
 - `log_level` (string): Log level (`debug`, `info`, `warn`, `error`), default `info`.
 - `api_keys` (string array): API authentication keys.
-
+- `auth_apis` (string array): Auth APIs：
+    - default: ["/api/v1/manage/get-status-info",
+      "/api/v1/manage/del-status-info",
+      "/api/v1/manage/upload-resource",
+      "/api/v1/manage/delete-resource",
+      "/api/v1/manage/get-resource-list",
+      "/api/v1/manage/get-config",
+      "/api/v1/manage/update-hot-config",
+      "/gocaptcha.GoCaptchaService/GetStatusInfo",
+      "/gocaptcha.GoCaptchaService/DelStatusInfo" ]
+  
 ### gocaptcha.json
 
 `gocaptcha.json` defines resources and generation settings for CAPTCHAs.
@@ -865,7 +876,7 @@ The service uses two configuration files: `config.json` for service runtime para
       "rotate-default": {
         "version": "0.0.1",
         "master": {
-          "image_square_size": 220,
+          "image_square_size": 220
         },
         "thumb": {
           "range_angles":  [{ "min": 30, "max": 330 }],
@@ -1046,6 +1057,7 @@ Hot-reloadable fields in `config.json` include:
 * `cache_ttl`
 * `cache_key_prefix`
 * `api_keys`
+* `auth_apis`
 * `log_level`
 * `rate_limit_qps`
 * `rate_limit_burst`

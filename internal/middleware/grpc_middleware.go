@@ -27,24 +27,27 @@ func UnaryServerInterceptor(dc *config.DynamicConfig, logger *zap.Logger, breake
 
 		// Validate API key
 		cfg := dc.Get()
-		apiKeyMap := make(map[string]struct{})
-		for _, key := range cfg.APIKeys {
-			apiKeyMap[key] = struct{}{}
-		}
 
-		md, ok := metadata.FromIncomingContext(ctx)
-		if !ok {
-			logger.Warn("[GrpcMiddleware] Missing metadata")
-			return nil, status.Error(codes.Unauthenticated, "missing API Key")
-		}
-		apiKeys := md.Get("x-api-key")
-		if len(apiKeys) == 0 {
-			logger.Warn("[GrpcMiddleware] Missing API Key")
-			return nil, status.Error(codes.Unauthenticated, "missing API Key")
-		}
-		if _, exists := apiKeyMap[apiKeys[0]]; !exists {
-			logger.Warn("[GrpcMiddleware] Invalid API Key", zap.String("key", apiKeys[0]))
-			return nil, status.Error(codes.Unauthenticated, "invalid API Key")
+		methodName := info.FullMethod
+		authApisMap := cfg.GetAuthAPIs()
+		if _, exists := authApisMap[methodName]; exists {
+			apiKeyMap := cfg.GetAPIKeys()
+			if len(apiKeyMap) == 0 {
+				logger.Warn("[GrpcMiddleware] Missing metadata")
+				return nil, status.Error(codes.Unauthenticated, "missing API Key")
+			}
+
+			md, ok := metadata.FromIncomingContext(ctx)
+			if !ok {
+				logger.Warn("[GrpcMiddleware] Missing metadata")
+				return nil, status.Error(codes.Unauthenticated, "missing API Key")
+			}
+
+			apiKeys := md.Get("x-api-key")
+			if _, exists := apiKeyMap[apiKeys[0]]; !exists {
+				logger.Warn("[GrpcMiddleware] Invalid API Key", zap.String("key", apiKeys[0]))
+				return nil, status.Error(codes.Unauthenticated, "invalid API Key")
+			}
 		}
 
 		// Apply circuit breaker
