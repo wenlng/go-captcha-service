@@ -321,7 +321,7 @@ func setupHealthCheck(httpAddr, grpcAddr string) error {
 	return nil
 }
 
-// cfg ...
+// setupCacheManager ...
 func setupCacheManager(dcfg *config.DynamicConfig, logger *zap.Logger) (*cache.CacheManager, error) {
 	cfg := dcfg.Get()
 	// Initialize cache

@@ -11,29 +11,48 @@
     "font": {
       "type": "load",
       "file_dir": "./gocaptcha/fonts/",
-      "file_maps": {}
+      "file_maps": {
+        "yrdzst_bold": "yrdzst-bold.ttf"
+      }
     },
     "shape_image": {
       "type": "load",
       "file_dir": "./gocaptcha/shape_images/",
-      "file_maps": {}
+      "file_maps": {
+        "shape_01": "shape_01.png",
+        "shape_01.png":"c.png"
+      }
     },
     "master_image": {
       "type": "load",
       "file_dir": "./gocaptcha/master_images/",
-      "file_maps": {}
+      "file_maps": {
+        "image_01": "image_01.jpg",
+        "image_02":"image_02.jpg"
+      }
     },
     "thumb_image": {
       "type": "load",
       "file_dir": "./gocaptcha/thumb_images/",
-      "file_maps": {}
+      "file_maps": {
+
+      }
     },
     "tile_image": {
       "type": "load",
       "file_dir": "./gocaptcha/tile_images/",
-      "file_maps": {},
-      "file_maps_02": {},
-      "file_maps_03": {}
+      "file_maps": {
+        "tile_01": "tile_01.png",
+        "tile_02": "tile_02.png"
+      },
+      "file_maps_02": {
+        "tile_mask_01": "tile_mask_01.png",
+        "tile_mask_02": "tile_mask_02.png"
+      },
+      "file_maps_03": {
+        "tile_shadow_01": "tile_shadow_01.png",
+        "tile_shadow_02": "tile_shadow_02.png"
+      }
     }
   },
   "builder": {

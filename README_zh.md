@@ -11,11 +11,11 @@
 
 <br/>
 
-`GoCaptcha Service` 是一个基于 Go 语言开发的高性能行为验证码服务，基于 **[go-captcha](https://github.com/wenlng/go-captcha)** 行为验证码基本库，支持点击、滑动、拖拽和旋转等多种验证码模式。它提供 HTTP 和 gRPC 接口，集成多种服务发现（Etcd、Nacos、Zookeeper、Consul）、分布式缓存（Memory、Redis、Etcd、Memcache）和分布式动态配置，支持单机和分布式部署，旨在为 Web 应用提供安全、灵活的验证码解决方案。
+`GoCaptcha Service` 是基于 Go 语言开发的高性能行为验证码服务，以 **[GoCaptcha](https://github.com/wenlng/go-captcha)** 行为验证码作为核心库，支持点击、滑动、拖拽和旋转等多种验证码模式。它提供 HTTP 和 gRPC 接口，集成多种服务发现（Etcd、Nacos、Zookeeper、Consul）、分布式缓存（Redis、Etcd、Memcache）和动态配置，支持单机和分布式架构部署，旨在为 Web 应用提供安全、灵活的验证码解决方案。
 
 <br/>
 
-> English | [中文](README_zh.md)
+> [English](README.md) | 中文
 <p> ⭐️ 如果能帮助到你，请随手给点一个star</p>
 <p>QQ交流群：178498936</p>
 
@@ -62,7 +62,7 @@
 <br/>
 
 ## 安装与部署
-`GoCaptcha Service` 支持多种部署方式，包括单机部署（二进制、命令行、PM2、Docker）和分布式部署（结合服务发现和分布式缓存，分布式动态配置可选）。
+支持多种部署方式，包括单机部署（二进制、命令行、PM2、Docker）和分布式部署（结合服务发现和分布式缓存，分布式动态配置可选）。
 
 ### 前置条件
 - 可选：Docker（用于容器化部署）
@@ -93,7 +93,7 @@
 <br/>
 <br/>
 
-#### PM2 部署
+#### PM2 部署（二进制方式推荐）
 PM2 是 Node.js 进程守护管理工具，可用于管理 Go 服务，提供进程守护和日志管理。
 1. 安装 Node.js 和 PM2：
 
@@ -113,8 +113,6 @@ PM2 是 Node.js 进程守护管理工具，可用于管理 Go 服务，提供进
        watch: false,
        max_memory_restart: '1G',
        env: {
-         CONFIG: 'config.json',
-         GO_CAPTCHA_CONFIG: 'gocaptcha.json',
          SERVICE_NAME: 'go-captcha-service',
          CACHE_TYPE: 'redis',
          CACHE_ADDRS: 'localhost:6379',
@@ -127,7 +125,7 @@ PM2 是 Node.js 进程守护管理工具，可用于管理 Go 服务，提供进
          CACHE_TYPE: 'redis',
          CACHE_ADDRS: 'localhost:6379',
          LOG_LEVEL: 'error',
-       }
+       },
      }]
    };
    ```
@@ -197,6 +195,12 @@ PM2 是 Node.js 进程守护管理工具，可用于管理 Go 服务，提供进
 
    ```bash
    docker run -d -p 8080:8080 -p 50051:50051 \
+     --name go-captcha-service go-captcha-service:latest
+   ```
+
+    或者配置版本：
+   ```bash
+   docker run -d -p 8080:8080 -p 50051:50051 \
      -v $(pwd)/config.json:/app/config.json \
      -v $(pwd)/gocaptcha.json:/app/gocaptcha.json \
      -v $(pwd)/resource/gocaptcha:/app/resource/gocaptcha \
@@ -219,9 +223,6 @@ PM2 是 Node.js 进程守护管理工具，可用于管理 Go 服务，提供进
 
    ```bash
    docker run -d -p 8080:8080 -p 50051:50051 \
-     -v $(pwd)/config.json:/app/config.json \
-     -v $(pwd)/gocaptcha.json:/app/gocaptcha.json \
-     -v $(pwd)/resource/gocaptcha:/app/resource/gocaptcha \
      --name go-captcha-service wenlng/go-captcha-service:latest
    ```
 
@@ -234,7 +235,7 @@ PM2 是 Node.js 进程守护管理工具，可用于管理 Go 服务，提供进
 
 #### 配置分布式缓存
 
-1. 在 `config.json` 中选择分布式缓存（如 Redis）：
+1. 默认缓存的类型 `memory` 为单体应用的内存缓存，需要在 `config.json` 中选择分布式缓存（如 Redis）：
 
    ```json
    {
@@ -256,14 +257,14 @@ PM2 是 Node.js 进程守护管理工具，可用于管理 Go 服务，提供进
 
 
 #### 分布式动态配置
-注意：当开启分布式动态配置功能后，`config.json` 和 `gocaptcha.json` 会同时作用
+注意：当开启分布式动态配置功能后，`config.json` 和 `gocaptcha.json` 都会作用
 
 1. 在 `config.json` 中启用动态配置，选择中间件（如 Etcd）：
 
    ```json
    {
      "enable_dynamic_config": true,
-     "dynamic_config": "etcd",
+     "dynamic_config_type": "etcd",
      "dynamic_config_addrs": "localhost:2379"
    }
    ```
@@ -274,7 +275,7 @@ PM2 是 Node.js 进程守护管理工具，可用于管理 Go 服务，提供进
    docker run -d -p 8848:8848 --name etcd bitnami/etcd::latest
    ```
 
-3. 配置文件同步与拉取
+3. 配置文件的同步与拉取
 * 服务在启动时会根据 `config_version` 版本决定推送与拉取，当本地版本大于远程（如 Etcd）的配置版本时会将本地配置推送覆盖，反之自动拉取更新到本地（非文件式更新）。
 * 在服务启动后，动态配置管理器会实时监听远程（如 Etcd）的配置，当远程配置发生变更后，会摘取到本地进行版本比较，当大于本地版本时都会覆盖本地的配置。
 
@@ -289,7 +290,7 @@ PM2 是 Node.js 进程守护管理工具，可用于管理 Go 服务，提供进
    ```json
    {
      "enable_service_discovery": true,
-     "service_discovery": "etcd",
+     "service_discovery_type": "etcd",
      "service_discovery_addrs": "localhost:2379"
    }
    ```
@@ -299,9 +300,10 @@ PM2 是 Node.js 进程守护管理工具，可用于管理 Go 服务，提供进
    ```bash
    docker run -d -p 8848:8848 --name etcd bitnami/etcd::latest
    ```
+   
 3. 服务注册与发现
 * 服务在启动时会自动向（Etcd | xxx）的中心注册服务实例。
-* 在服务启动后，同时会进行服务实例的变化监听，可参考在 [go-captcha-service-sdk](https://github.com/wenlng/go-captcha-service-sdk) 中的负载均衡应用。
+* 在服务启动后，同时将进行服务实例的变化监听，可参考在 [go-captcha-service-sdk](https://github.com/wenlng/go-captcha-service-sdk) 中的负载均衡应用。
 
 <br/>
 <br/>
@@ -393,59 +395,60 @@ docker-compose up -d
 ## 预置 API
 * 获取验证码
     ```shell
-    curl -H "X-API-Key:my-secret-key-123" http://127.0.0.1:8080/api/v1/public/get-data\?id\=click-default-ch
+    curl http://127.0.0.1:8080/api/v1/public/get-data\?id\=click-default-ch
     ```
 
-* 验证码校验
+* 验证码校验  data == "ok" 代表成功
     ```shell
-    curl -X POST -H "X-API-Key:my-secret-key-123" -H "Content-Type:application/json" -d '{"id":"click-default-ch","captchaKey":"xxxx-xxxxx","value": "x1,y1,x2,y2"}' http://127.0.0.1:8181/api/v1/public/check-data
+    curl -X POST -H "Content-Type:application/json" -d '{"id":"click-default-ch","captchaKey":"xxxx-xxxxx","value": "x1,y1,x2,y2"}' http://127.0.0.1:8181/api/v1/public/check-data
     ```
 
 * 获取校验结果  data == "ok" 代表成功
   ```shell
-  curl -H "X-API-Key:my-secret-key-123" http://127.0.0.1:8080/api/v1/public/check-status\?captchaKey\=xxxx-xxxx
+  curl http://127.0.0.1:8080/api/v1/public/check-status\?captchaKey\=xxxx-xxxx
   ```
 
-* 获取状态信息（不允许暴露公网）
+* 获取状态信息
   ```shell
   curl -H "X-API-Key:my-secret-key-123" http://127.0.0.1:8080/api/v1/manage/get-status-info\?captchaKey\=xxxx-xxxx
   ```
 
-* 上传资源（不允许暴露公网）
+* 上传资源
   ```shell
   curl -X POST -H "X-API-Key:my-secret-key-123" -F "dirname=imagesdir" -F "files=@/path/to/file1.jpg" -F "files=@/path/to/file2.jpg" http://127.0.0.1:8080/api/v1/manage/upload-resource
   ```
 
-* 删除资源（不允许暴露公网）
+* 删除资源
   ```shell
   curl -X DELETE -H "X-API-Key:my-secret-key-123" http://127.0.0.1:8080/api/v1/manage/delete-resource?path=xxxxx.jpg
   ```
 
-* 获取资源文件列表（不允许暴露公网）
+* 获取资源文件列表
   ```shell
   curl -H "X-API-Key:my-secret-key-123" http://127.0.0.1:8080/api/v1/manage/get-resource-list?path=imagesdir
   ```
 
-* 获取验证码配置（不允许暴露公网）
+* 获取验证码配置
   ```shell
   curl -H "X-API-Key:my-secret-key-123" http://127.0.0.1:8080/api/v1/manage/get-config
   ```
 
-* 更新验证码配置，非文件更新（不允许暴露公网）
+* 更新验证码配置，非文件更新
   ```shell
   curl -X POST -H "X-API-Key:my-secret-key-123" -H "Content-Type:application/json" -d '{"config_version":3,"resources":{ ... },"builder": { ... }}' http://127.0.0.1:8080/api/v1/manage/update-hot-config
   ```
   
-更详情和 Grpc API 请转到 [go-captcha-service-sdk](https://github.com/wenlng/go-captcha-service-sdk)
+更详情和 Grpc API 请转到 [GoCaptchaServiceSdk](https://github.com/wenlng/go-captcha-service-sdk)
 
 <br/>
 <br/>
 
 
 ## API 校验配置
-如果在 `config.json` 配置了 `api-keys`，则服务的 HTTP 和 gRPC 相关的 API 都需要通过请求头携带 X-API-Key 进行校验。
+如果你需要访问 `/api/v1/manage` 管理的接口，需要在 `config.json` 配置 `api-keys`，之后在服务的 HTTP 和 gRPC 相关的 API 在请求头携带 X-API-Key 进行校验。
 
-内置 API 的 `/api/v1/manage` 是不允许暴露公网，不安全，需要匹配路由规则为 `/api/v1/public` 开放到公开，可以通过相关WEB应用服务器、反向代理服务器或者网关软件代理到内部服务，例如：Kong、Envoy、Tomcat、Nginx 等。
+虽然内置的管理 API `/api/v1/manage` 有鉴权行为，但正式环境推荐将 `api-keys` 设置超过 128 长度，尽量不要将管理API暴露公网，以防暴力破解。
+安全加强：匹配路由规则为 `/api/v1/manage` 禁止访问，可以通过相关WEB应用服务器、反向代理服务器或者网关软件代理到内部服务，例如：Kong、Envoy、Tomcat、Nginx 等。
 
 以 Nginx 反向代理路由匹配规则公网路由规则示例
 ```text
@@ -461,7 +464,7 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     }
 
-    # 匹配 /api/v1/manage 的请求，禁止访问
+    # 加强安全：匹配 /api/v1/manage 的请求，禁止访问
     location ^~ /api/v1/manage {
         deny all; # 禁止所有请求，返回 403
     }
@@ -520,6 +523,7 @@ server {
 * rate-limit-qps：设置速率限制 QPS。
 * rate-limit-burst：设置速率限制突发量。
 * api-keys：设置 API 密钥，逗号分隔。
+* auth-apis：设置监权 APIs，逗号分隔。
 * log-level：设置日志级别，支持 error、debug、warn、info。
 * health-check：运行健康检查并退出，默认 false。
 * enable-cors：启用跨域资源共享，默认 false。
@@ -535,7 +539,9 @@ server {
 * HTTP_PORT: HTTP 服务监听端口。
 * GRPC_PORT: gRPC 服务监听端口。
 * API_KEYS: API 密钥，用于认证或授权。
-* `LOG_LEVEL`: Log level.
+* AUTH_APIS: 鉴权 API，用于认证或授权。
+* LOG_LEVEL: 设置 Log 级别.
+* ENABLE_CORS: 启用跨域资源共享，默认 false。
 
 缓存配置：
 * CACHE_TYPE: 缓存类型（如 redis、memcached、memory、etcd）。
@@ -613,7 +619,7 @@ server {
    "rate_limit_burst": 1000,
    "enable_cors": true,
    "log_level": "info",
-   "api_keys": ["my-secret-key-123", "another-key-456", "another-key-789"]
+   "api_keys": ["xxxx-xxxx-xxx"]
 }
 ```
 
@@ -677,10 +683,20 @@ server {
 - `enable_cors` (布尔)：启用 CORS，默认 `true`。
 - `log_level` (字符串)：日志级别（`debug`、`info`、`warn`、`error`），默认 `info`。
 - `api_keys` (字符串数组)：API 认证密钥。
+- `auth_apis` (字符串数组)：鉴权 API：
+    - 默认http+grpc: ["/api/v1/manage/get-status-info",
+      "/api/v1/manage/del-status-info",
+      "/api/v1/manage/upload-resource",
+      "/api/v1/manage/delete-resource",
+      "/api/v1/manage/get-resource-list",
+      "/api/v1/manage/get-config",
+      "/api/v1/manage/update-hot-config",
+      "/gocaptcha.GoCaptchaService/GetStatusInfo",
+      "/gocaptcha.GoCaptchaService/DelStatusInfo" ]
 
 ### gocaptcha.json
 
-`gocaptcha.json` 定义验证码的资源和生成配置。
+`gocaptcha.json` 定义验证码的资源和生成配置示例。
 
 ```json
 {
@@ -1052,6 +1068,7 @@ server {
 * `cache_ttl`
 * `cache_key_prefix`
 * `api_keys`
+* `auth_apis`
 * `log_level`
 * `rate_limit_qps`
 * `rate_limit_burst`

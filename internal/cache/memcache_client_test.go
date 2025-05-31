@@ -9,7 +9,7 @@ import (
 )
 
 func TestMemcacheClient(t *testing.T) {
-	client, err := NewMemcacheClient("localhost:11211", "TEST_KEY:", 60*time.Second)
+	client, err := NewMemcacheClient("localhost:11211", "TEST_KEY:", 60*time.Second, "", "")
 	assert.NoError(t, err)
 	defer client.Close()
 
@@ -18,7 +18,6 @@ func TestMemcacheClient(t *testing.T) {
 		if err != nil {
 			t.Skip("Memcached not running")
 		}
-
 		value, err := client.GetCache(context.Background(), "key1")
 		assert.NoError(t, err)
 		assert.Equal(t, "value1", value)

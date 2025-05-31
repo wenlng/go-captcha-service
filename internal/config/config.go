@@ -38,6 +38,7 @@ type Config struct {
 	RateLimitBurst int      `json:"rate_limit_burst"`
 	EnableCors     bool     `json:"enable_cors"`
 	APIKeys        []string `json:"api_keys"`
+	AuthAPIs       []string `json:"auth_apis"`
 	LogLevel       string   `json:"log_level"` // error, debug, info, none
 
 	EnableDynamicConfig         bool   `json:"enable_dynamic_config"`
@@ -69,6 +70,32 @@ type Config struct {
 	ServiceDiscoveryTlsCertFile    string `json:"service_discovery_tls_cert_file"`
 	ServiceDiscoveryTlsKeyFile     string `json:"service_discovery_tls_key_file"`
 	ServiceDiscoveryTlsCaFile      string `json:"service_discovery_tls_ca_file"`
+}
+
+// GetAuthAPIs ..
+func (cfg *Config) GetAuthAPIs() map[string]struct{} {
+	apisMap := make(map[string]struct{})
+
+	authApis := getDefaultAuthAPIs()
+	if len(cfg.AuthAPIs) > 0 {
+		authApis = cfg.AuthAPIs
+	}
+
+	for _, key := range authApis {
+		apisMap[key] = struct{}{}
+	}
+
+	return apisMap
+}
+
+// GetAPIKeys ..
+func (cfg *Config) GetAPIKeys() map[string]struct{} {
+	apiKeyMap := make(map[string]struct{})
+	for _, key := range cfg.APIKeys {
+		apiKeyMap[key] = struct{}{}
+	}
+
+	return apiKeyMap
 }
 
 // DynamicConfig .
@@ -207,6 +234,7 @@ func (dc *DynamicConfig) HotUpdate(cfg Config) error {
 	// Update config fields
 	dc.Config.ConfigVersion = cfg.ConfigVersion
 	dc.Config.APIKeys = cfg.APIKeys
+	dc.Config.AuthAPIs = cfg.AuthAPIs
 	dc.Config.LogLevel = cfg.LogLevel
 	dc.Config.CacheAddrs = cfg.CacheAddrs
 	dc.Config.CacheUsername = cfg.CacheUsername
@@ -498,6 +526,9 @@ func MergeWithFlags(config Config, flags map[string]interface{}) Config {
 	if v, ok := flags["api-keys"].(string); ok && v != "" {
 		config.APIKeys = strings.Split(v, ",")
 	}
+	if v, ok := flags["auth-apis"].(string); ok && v != "" {
+		config.AuthAPIs = strings.Split(v, ",")
+	}
 	if v, ok := flags["log-level"].(string); ok && v != "" {
 		config.LogLevel = v
 	}
@@ -523,6 +554,24 @@ func DefaultConfig() Config {
 		RateLimitBurst:         1000,
 		EnableCors:             true,
 		APIKeys:                make([]string, 0),
+		AuthAPIs:               getDefaultAuthAPIs(),
 		LogLevel:               "info",
+	}
+}
+
+// getDefaultAuthAPIs ..
+func getDefaultAuthAPIs() []string {
+	return []string{
+		// http
+		"/api/v1/manage/get-status-info",
+		"/api/v1/manage/del-status-info",
+		"/api/v1/manage/upload-resource",
+		"/api/v1/manage/delete-resource",
+		"/api/v1/manage/get-resource-list",
+		"/api/v1/manage/get-config",
+		"/api/v1/manage/update-hot-config",
+		// grpc
+		"/gocaptcha.GoCaptchaService/GetStatusInfo",
+		"/gocaptcha.GoCaptchaService/DelStatusInfo",
 	}
 }
