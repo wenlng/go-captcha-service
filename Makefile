@@ -2,8 +2,9 @@
 
 # Variables
 BINARY_NAME=go-captcha-service
-VERSION?=1.0.1
+VERSION?=1.0.3
 BUILD_DIR=build
+COMPRESSED_DIR=build/compressed
 PLATFORMS=darwin/amd64 darwin/arm64 linux/amd64 linux/arm64 linux/arm/v7 windows/amd64
 DOCKER_IMAGE?=wenlng/go-captcha-service
 GO=go
@@ -68,6 +69,15 @@ build-multi: proto
 		if [ "$$os" = "windows" ]; then output=$$output.exe; fi; \
 		echo "Building $$os/$$arch..."; \
 		CGO_ENABLED=0 GOOS=$$os GOARCH=$$arch $(GO) build $(GOFLAGS) -o $$output ./cmd/go-captcha-service || exit 1; \
+	done
+
+.PHONY: build-compress
+build-compress:
+	@mkdir -p $(COMPRESSED_DIR)
+	@for file in $(BUILD_DIR)/*; do \
+		if [ -f "$$file" ] && [[ $$(basename "$$file") != .* ]]; then \
+			zip -j $(COMPRESSED_DIR)/$$(basename "$$file").zip "$$file"; \
+		fi; \
 	done
 
 # Packaging Binaries

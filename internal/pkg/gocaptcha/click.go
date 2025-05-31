@@ -297,5 +297,5 @@ func setupClickShapeCapt(conf config.ClickConfig, resources config.ResourceConfi
 	builder := click.NewBuilder(newOptions...)
 	builder.SetResources(newResources...)
 
-	return builder.MakeWithShape(), nil
+	return builder.MakeShape(), nil
 }

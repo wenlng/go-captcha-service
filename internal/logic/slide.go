@@ -112,8 +112,8 @@ func (cl *SlideCaptLogic) GetData(ctx context.Context, id string) (res *adapt.Ca
 	res.MasterHeight = int32(opts.GetImageSize().Height)
 	res.ThumbWidth = int32(data.Width)
 	res.ThumbHeight = int32(data.Height)
-	res.DisplayX = int32(data.TileX)
-	res.DisplayY = int32(data.TileY)
+	res.DisplayX = int32(data.DX)
+	res.DisplayY = int32(data.DY)
 	res.CaptchaKey = key
 	return res, nil
 }
@@ -157,9 +157,9 @@ func (cl *SlideCaptLogic) CheckData(ctx context.Context, key string, dots string
 
 	ret := false
 	if 2 == len(src) {
-		sx, _ := strconv.ParseInt(src[0], 10, 64)
-		sy, _ := strconv.ParseInt(src[1], 10, 64)
-		ret = slide.CheckPoint(sx, sy, int64(dct.X), int64(dct.Y), 4)
+		sx, _ := strconv.Atoi(src[0])
+		sy, _ := strconv.Atoi(src[1])
+		ret = slide.Validate(sx, sy, dct.X, dct.Y, 4)
 	}
 
 	if ret {

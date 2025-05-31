@@ -475,6 +475,8 @@ github.com/wenlng/go-captcha-assets v1.0.6 h1:PSTTReE7QXsYdBnE/oZB91BllCZSvBKb4u
 github.com/wenlng/go-captcha-assets v1.0.6/go.mod h1:zinRACsdYcL/S6pHgI9Iv7FKTU41d00+43pNX+b9+MM=
 github.com/wenlng/go-captcha/v2 v2.0.3 h1:QTZ39/gVDisPSgvL9O2X2HbTuj5P/z8QsdGB/aayg9c=
 github.com/wenlng/go-captcha/v2 v2.0.3/go.mod h1:5hac1em3uXoyC5ipZ0xFv9umNM/waQvYAQdr0cx/h34=
+github.com/wenlng/go-captcha/v2 v2.0.4 h1:5cSUF36ZyA03qeDMjKmeXGpbYJMXEexZIYK3Vga3ME0=
+github.com/wenlng/go-captcha/v2 v2.0.4/go.mod h1:5hac1em3uXoyC5ipZ0xFv9umNM/waQvYAQdr0cx/h34=
 github.com/wenlng/go-service-link v0.0.2 h1:5nB/W1UD5EkH+JEtVA71tzBZX/FXZRyXHg8Ovo4Oggs=
 github.com/wenlng/go-service-link v0.0.2/go.mod h1:1d4570TMBbMPv/w0pwgjT7Ev6Ajxv2/u0UVL1mIh6Y0=
 github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2 h1:eY9dn8+vbi4tKz5Qo6v2eYzo7kUS51QINcR5jNpbZS8=

@@ -533,7 +533,7 @@ func MergeWithFlags(config Config, flags map[string]interface{}) Config {
 		config.LogLevel = v
 	}
 
-	if v, ok := flags["enable-cors"].(bool); ok && !config.EnableCors {
+	if v, ok := flags["enable-cors"].(bool); ok {
 		config.EnableCors = v
 	}
 	return config

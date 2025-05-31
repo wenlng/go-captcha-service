@@ -159,10 +159,9 @@ func (cl *ClickCaptLogic) CheckData(ctx context.Context, key string, dots string
 			dot := dct[i]
 			j := i * 2
 			k := i*2 + 1
-			sx, _ := strconv.ParseInt(src[j], 10, 64)
-			sy, _ := strconv.ParseInt(src[k], 10, 64)
-
-			ret = click.CheckPoint(sx, sy, int64(dot.X), int64(dot.Y), int64(dot.Width), int64(dot.Height), 0)
+			sx, _ := strconv.Atoi(src[j])
+			sy, _ := strconv.Atoi(src[k])
+			ret = click.Validate(sx, sy, dot.X, dot.Y, dot.Width, dot.Height, 0)
 			if !ret {
 				break
 			}

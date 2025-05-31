@@ -149,9 +149,14 @@ func CircuitBreakerMiddleware(breaker *gobreaker.CircuitBreaker, logger *zap.Log
 }
 
 // CORSMiddleware implements cross-origin resource sharing
-func CORSMiddleware(logger *zap.Logger) HTTPMiddleware {
+func CORSMiddleware(dc *config.DynamicConfig, logger *zap.Logger) HTTPMiddleware {
 	return func(next HandlerFunc) HandlerFunc {
 		return func(w http.ResponseWriter, r *http.Request) {
+			if !dc.Get().EnableCors {
+				next(w, r)
+				return
+			}
+
 			origin := r.Header.Get("Origin")
 
 			allowedOrigins := []string{"*"}

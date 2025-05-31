@@ -753,7 +753,7 @@ The service uses two configuration files: `config.json` for service runtime para
         "version": "0.0.1",
         "language": "chinese",
         "master": {
-          "image_size": { "width": 300, "height": 200 },
+          "image_size": { "width": 300, "height": 220 },
           "range_length": { "min": 6, "max": 7 },
           "range_angles": [
             { "min": 20, "max": 35 },
@@ -804,7 +804,7 @@ The service uses two configuration files: `config.json` for service runtime para
       "click-shape-default":  {
         "version": "0.0.1",
         "master": {
-          "image_size": { "width": 300, "height": 200 },
+          "image_size": { "width": 300, "height": 220 },
           "range_length": { "min": 6, "max": 7 },
           "range_angles": [
             { "min": 20, "max": 35 },
@@ -840,7 +840,7 @@ The service uses two configuration files: `config.json` for service runtime para
       "slide-default": {
         "version": "0.0.1",
         "master": {
-          "image_size": { "width": 300, "height": 200 },
+          "image_size": { "width": 300, "height": 220 },
           "image_alpha": 1
         },
         "thumb": {
@@ -858,7 +858,7 @@ The service uses two configuration files: `config.json` for service runtime para
       "drag-default": {
         "version": "0.0.1",
         "master": {
-          "image_size": { "width": 300, "height": 200 },
+          "image_size": { "width": 300, "height": 220 },
           "image_alpha": 1
         },
         "thumb": {

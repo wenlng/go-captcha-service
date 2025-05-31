@@ -388,11 +388,12 @@ func (a *App) startHTTPServer(svcCtx *common.SvcContext, cfg *config.Config) err
 	var middlewares = make([]middleware.HTTPMiddleware, 0)
 
 	// Enable cross-domain resource
-	if cfg.EnableCors {
-		middlewares = append(middlewares, nil, middleware.CORSMiddleware(a.logger))
-	}
+	//if cfg.EnableCors {
+	//	middlewares = append(middlewares, nil, middleware.CORSMiddleware(a.dynamicCfg, a.logger))
+	//}
 
 	middlewares = append(middlewares,
+		middleware.CORSMiddleware(a.dynamicCfg, a.logger),
 		middleware.APIKeyMiddleware(a.dynamicCfg, a.logger),
 		middleware.LoggingMiddleware(a.logger),
 		middleware.RateLimitMiddleware(a.limiter, a.logger),
