@@ -39,7 +39,7 @@ func genSlideOptions(conf config.SlideConfig) ([]slide.Option, error) {
 	}
 
 	// Thumb image
-	if conf.Thumb.RangeGraphSizes.Min >= 0 && conf.Thumb.RangeGraphSizes.Max > 0 {
+	if conf.Thumb.RangeGraphSizes.Min > 0 && conf.Thumb.RangeGraphSizes.Max > 0 {
 		options = append(options, slide.WithRangeGraphSize(conf.Thumb.RangeGraphSizes))
 	}
 
@@ -223,5 +223,5 @@ func setupDragCapt(conf config.SlideConfig, resources config.ResourceConfig) (ca
 	builder := slide.NewBuilder(newOptions...)
 	builder.SetResources(newResources...)
 
-	return builder.MakeWithRegion(), nil
+	return builder.MakeDragDrop(), nil
 }

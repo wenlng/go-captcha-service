@@ -12,7 +12,7 @@ require (
 	github.com/sony/gobreaker v0.5.0
 	github.com/stretchr/testify v1.9.0
 	github.com/wenlng/go-captcha-assets v1.0.6
-	github.com/wenlng/go-captcha/v2 v2.0.3
+	github.com/wenlng/go-captcha/v2 v2.0.4
 	github.com/wenlng/go-service-link v0.0.2
 	go.etcd.io/etcd/client/v3 v3.5.21
 	go.etcd.io/etcd/server/v3 v3.5.21

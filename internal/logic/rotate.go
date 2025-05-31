@@ -147,7 +147,7 @@ func (cl *RotateCaptLogic) CheckData(ctx context.Context, key string, angle int)
 		return false, nil
 	}
 
-	ret := rotate.CheckAngle(int64(angle), int64(dct.Angle), 2)
+	ret := rotate.Validate(angle, dct.Angle, 2)
 
 	if ret {
 		cacheCaptData.Status = 1
