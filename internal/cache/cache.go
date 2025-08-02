@@ -57,6 +57,7 @@ type CacheMgrParams struct {
 	CacheAddrs    string
 	CacheUsername string
 	CachePassword string
+	CacheDB       string
 	KeyPrefix     string
 	Ttl           time.Duration
 	CleanInt      time.Duration
@@ -91,7 +92,7 @@ func (cm *CacheManager) Setup(arg *CacheMgrParams) error {
 			cm.cPassword == arg.CachePassword {
 			return nil
 		}
-		curCache, err = NewRedisClient(arg.CacheAddrs, arg.KeyPrefix, arg.Ttl, arg.CacheUsername, arg.CachePassword)
+		curCache, err = NewRedisClient(arg.CacheAddrs, arg.KeyPrefix, arg.Ttl, arg.CacheUsername, arg.CachePassword, arg.CacheDB)
 		if err != nil {
 			return fmt.Errorf("failed to initialize Redis: %v", err)
 		}

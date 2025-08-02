@@ -24,6 +24,8 @@ const (
 
 // Config defines the configuration structure for the application
 type Config struct {
+	ServiceNode int64 `json:"service_node"`
+
 	ConfigVersion  int64    `json:"config_version"`
 	ServiceName    string   `json:"service_name"`
 	HTTPPort       string   `json:"http_port"`
@@ -31,6 +33,7 @@ type Config struct {
 	CacheAddrs     string   `json:"cache_addrs"`
 	CacheUsername  string   `json:"cache_username"`
 	CachePassword  string   `json:"cache_password"`
+	CacheDB        string   `json:"cache_db"`
 	CacheType      string   `json:"cache_type"` // redis, memory, etcd, memcache
 	CacheTTL       int      `json:"cache_ttl"`  // seconds
 	CacheKeyPrefix string   `json:"cache_key_prefix"`
@@ -239,6 +242,7 @@ func (dc *DynamicConfig) HotUpdate(cfg Config) error {
 	dc.Config.CacheAddrs = cfg.CacheAddrs
 	dc.Config.CacheUsername = cfg.CacheUsername
 	dc.Config.CachePassword = cfg.CachePassword
+	dc.Config.CacheDB = cfg.CacheDB
 	dc.Config.CacheType = cfg.CacheType
 	dc.Config.CacheTTL = cfg.CacheTTL
 	dc.Config.CacheKeyPrefix = cfg.CacheKeyPrefix
@@ -406,11 +410,17 @@ func MergeWithFlags(config Config, flags map[string]interface{}) Config {
 	if v, ok := flags["service-name"].(string); ok && v != "" {
 		config.ServiceName = v
 	}
+	if v, ok := flags["service-node"].(int64); ok && v > 0 {
+		config.ServiceNode = v
+	}
 	if v, ok := flags["grpc-port"].(string); ok && v != "" {
 		config.GRPCPort = v
 	}
 	if v, ok := flags["cache-addrs"].(string); ok && v != "" {
 		config.CacheAddrs = v
+	}
+	if v, ok := flags["cache-db"].(string); ok && v != "" {
+		config.CacheDB = v
 	}
 	if v, ok := flags["cache-username"].(string); ok && v != "" {
 		config.CacheUsername = v
@@ -429,8 +439,8 @@ func MergeWithFlags(config Config, flags map[string]interface{}) Config {
 	}
 
 	/////
-	if v, ok := flags["enable-dynamic-config"].(bool); ok && !config.EnableDynamicConfig {
-		config.EnableDynamicConfig = v
+	if v, ok := flags["enable-dynamic-config"].(string); ok && !config.EnableDynamicConfig {
+		config.EnableDynamicConfig = v == "true"
 	}
 	if v, ok := flags["dynamic-config-type"].(string); ok && v != "" {
 		config.DynamicConfigType = v
@@ -473,8 +483,8 @@ func MergeWithFlags(config Config, flags map[string]interface{}) Config {
 	}
 
 	/////
-	if v, ok := flags["enable-service-discovery"].(bool); ok && !config.EnableServiceDiscovery {
-		config.EnableServiceDiscovery = v
+	if v, ok := flags["enable-service-discovery"].(string); ok && !config.EnableServiceDiscovery {
+		config.EnableServiceDiscovery = v == "true"
 	}
 	if v, ok := flags["service-discovery-type"].(string); ok && v != "" {
 		config.ServiceDiscoveryType = v
@@ -533,8 +543,8 @@ func MergeWithFlags(config Config, flags map[string]interface{}) Config {
 		config.LogLevel = v
 	}
 
-	if v, ok := flags["enable-cors"].(bool); ok {
-		config.EnableCors = v
+	if v, ok := flags["enable-cors"].(string); ok {
+		config.EnableCors = v == "true"
 	}
 	return config
 }
@@ -542,16 +552,18 @@ func MergeWithFlags(config Config, flags map[string]interface{}) Config {
 func DefaultConfig() Config {
 	return Config{
 		ServiceName:            "go-captcha-service",
+		ServiceNode:            1,
 		HTTPPort:               "8080",
 		GRPCPort:               "50051",
 		CacheType:              "memory",
 		CacheAddrs:             "",
+		CacheDB:                "0",
 		CacheTTL:               60,
 		CacheKeyPrefix:         "GO_CAPTCHA_DATA:",
 		EnableDynamicConfig:    false,
 		EnableServiceDiscovery: false,
-		RateLimitQPS:           1000,
-		RateLimitBurst:         1000,
+		RateLimitQPS:           1024,
+		RateLimitBurst:         1024,
 		EnableCors:             true,
 		APIKeys:                make([]string, 0),
 		AuthAPIs:               getDefaultAuthAPIs(),

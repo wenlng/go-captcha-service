@@ -13,6 +13,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -54,17 +55,19 @@ func NewApp() (*App, error) {
 	configFile := flag.String("config", "config.json", "Path to config file")
 	gocaptchaConfigFile := flag.String("gocaptcha-config", "gocaptcha.json", "Path to gocaptcha config file")
 	serviceName := flag.String("service-name", "", "Name for service")
+	serviceNode := flag.Int64("service-node", 1, "Node number for service")
 	httpPort := flag.String("http-port", "", "Port for HTTP server")
 	grpcPort := flag.String("grpc-port", "", "Port for gRPC server")
 
 	cacheType := flag.String("cache-type", "", "CacheManager type: redis, memory, etcd, memcache")
 	cacheAddrs := flag.String("cache-addrs", "", "Comma-separated Cache cluster addresses")
-	cacheUsername := flag.String("cache-username", "", "Comma-separated cache cluster username")
-	cachePassword := flag.String("cache-password", "", "Comma-separated cache cluster password")
+	cacheUsername := flag.String("cache-username", "", "Cache service username")
+	cachePassword := flag.String("cache-password", "", "Cache service password")
+	cacheDB := flag.String("cache-dbb", "0", "Cache service db name")
 	cacheTTL := flag.Int("cache-ttl", 0, "CacheManager TTL in seconds")
 	cacheKeyPrefix := flag.String("cache-key-prefix", "GO_CAPTCHA_DATA:", "Key prefix for cache")
 
-	enableDynamicConfig := flag.Bool("enable-dynamic-config", false, "Enable dynamic config")
+	enableDynamicConfig := flag.String("enable-dynamic-config", "false", "Enable dynamic config")
 	dynamicConfigType := flag.String("dynamic-config-type", "", "Service discovery: etcd, zookeeper, consul, nacos")
 	dynamicConfigAddrs := flag.String("dynamic-config-addrs", "", "Comma-separated list of service dynamic config addresses")
 	dynamicConfigTTL := flag.Int("dynamic-config-ttl", 10, "Time-to-live in seconds for dynamic config registrations")
@@ -79,7 +82,7 @@ func NewApp() (*App, error) {
 	dynamicConfigTlsKeyFile := flag.String("dynamic-config-tls-key-file", "", "Path to TLS key file for dynamic config")
 	dynamicConfigTlsCaFile := flag.String("dynamic-config-tls-ca-file", "", "Path to TLS CA file for dynamic config")
 
-	enableServiceDiscovery := flag.Bool("enable-service-discovery", false, "Enable service discovery")
+	enableServiceDiscovery := flag.String("enable-service-discovery", "false", "Enable service discovery")
 	serviceDiscoveryType := flag.String("service-discovery-type", "", "Service discovery: etcd, zookeeper, consul, nacos")
 	serviceDiscoveryAddrs := flag.String("service-discovery-addrs", "", "Comma-separated list of service discovery server addresses")
 	serviceDiscoveryTTL := flag.Int("service-discovery-ttl", 10, "Time-to-live in seconds for service discovery registrations")
@@ -99,8 +102,8 @@ func NewApp() (*App, error) {
 	apiKeys := flag.String("api-keys", "", "Comma-separated API keys")
 	authApis := flag.String("auth-apis", "", "Comma-separated Auth APIs")
 	logLevel := flag.String("log-level", "", "Set log level: error, debug, warn, info")
-	healthCheckFlag := flag.Bool("health-check", false, "Run health check and exit")
-	enableCorsFlag := flag.Bool("enable-cors", false, "Enable cross-domain resources")
+	healthCheckFlag := flag.String("health-check", "false", "Run health check and exit")
+	enableCorsFlag := flag.String("enable-cors", "true", "Enable cross-domain resources")
 
 	flag.Parse()
 
@@ -114,6 +117,10 @@ func NewApp() (*App, error) {
 
 	if v, exists := os.LookupEnv("SERVICE_NAME"); exists {
 		*serviceName = v
+	}
+	if v, exists := os.LookupEnv("SERVICE_NODE"); exists {
+		n, _ := strconv.ParseInt(v, 10, 64)
+		*serviceNode = n
 	}
 	if v, exists := os.LookupEnv("HTTP_PORT"); exists {
 		*httpPort = v
@@ -139,16 +146,19 @@ func NewApp() (*App, error) {
 	if v, exists := os.LookupEnv("CACHE_PASSWORD"); exists {
 		*cachePassword = v
 	}
+	if v, exists := os.LookupEnv("CACHE_DB"); exists {
+		*cacheDB = v
+	}
 	if v, exists := os.LookupEnv("LOG_LEVEL"); exists {
 		*logLevel = v
 	}
 
 	if v, exists := os.LookupEnv("ENABLE_CORS"); exists {
-		*enableCorsFlag = v == "true"
+		*enableCorsFlag = v
 	}
 
 	if v, exists := os.LookupEnv("ENABLE_DYNAMIC_CONFIG"); exists {
-		*enableDynamicConfig = v == "true"
+		*enableDynamicConfig = v
 	}
 	if v, exists := os.LookupEnv("DYNAMIC_CONFIG_TYPE"); exists {
 		*dynamicConfigType = v
@@ -164,7 +174,7 @@ func NewApp() (*App, error) {
 	}
 
 	if v, exists := os.LookupEnv("ENABLE_SERVICE_DISCOVERY"); exists {
-		*enableServiceDiscovery = v == "true"
+		*enableServiceDiscovery = v
 	}
 	if v, exists := os.LookupEnv("SERVICE_DISCOVERY_TYPE"); exists {
 		*serviceDiscoveryType = v
@@ -216,6 +226,7 @@ func NewApp() (*App, error) {
 	cfg := dc.Get()
 	cfg = config.MergeWithFlags(cfg, map[string]interface{}{
 		"service-name": *serviceName,
+		"service-node": *serviceNode,
 		"http-port":    *httpPort,
 		"grpc-port":    *grpcPort,
 
@@ -223,6 +234,7 @@ func NewApp() (*App, error) {
 		"cache-addrs":      *cacheAddrs,
 		"cache-username":   *cacheUsername,
 		"cache-password":   *cachePassword,
+		"cache-db":         *cacheDB,
 		"cache-ttl":        *cacheTTL,
 		"cache-key-prefix": *cacheKeyPrefix,
 
@@ -314,7 +326,7 @@ func NewApp() (*App, error) {
 	})
 
 	// Perform health check if requested
-	if *healthCheckFlag {
+	if *healthCheckFlag == "true" {
 		if err = setupHealthCheck(":"+cfg.HTTPPort, ":"+cfg.GRPCPort); err != nil {
 			logger.Error("[App] Filed to health check", zap.Error(err))
 			os.Exit(1)

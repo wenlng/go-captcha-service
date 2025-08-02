@@ -2,14 +2,14 @@
 
 # Variables
 BINARY_NAME=go-captcha-service
-VERSION?=1.0.3
+VERSION?=1.0.4
 BUILD_DIR=build
 COMPRESSED_DIR=build/compressed
 PLATFORMS=darwin/amd64 darwin/arm64 linux/amd64 linux/arm64 linux/arm/v7 windows/amd64
 DOCKER_IMAGE?=wenlng/go-captcha-service
 GO=go
 GOFLAGS=-ldflags="-w -s" -v -a -trimpath
-COPY_BUILD_FILES=config.json ecosystem.config.js
+COPY_BUILD_FILES=config.json gocaptcha.json ecosystem.config.js
 
 # Default Target
 .PHONY: all
@@ -50,7 +50,7 @@ start-dev:
 
 .PHONY: start
 start:
-	go run ./cmd/go-captcha-service/main.go -config config.dev.json -gocaptcha-config gocaptcha.dev.json
+	go run ./cmd/go-captcha-service/main.go -config config.json -gocaptcha-config gocaptcha.json
 	@echo "Starting service successfully"
 
 # Build the application
@@ -91,7 +91,7 @@ package: build-multi
 		if [ "$$os" = "windows" ]; then binary=$$binary.exe; fi; \
 		package=$(BUILD_DIR)/packages/$(BINARY_NAME)-$(VERSION)-$$os-$$arch.tar.gz; \
 		echo "Packaging $$os/$$arch..."; \
-		tar -czf $$package -C $(BUILD_DIR) $(BINARY_NAME)-$$os-$$arch config.json ecosystem.config.js; \
+		tar -czf $$package -C $(BUILD_DIR) $(BINARY_NAME)-$$os-$$arch config.json gocaptcha.json ecosystem.config.js; \
 	done
 
 # Run tests

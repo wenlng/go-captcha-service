@@ -9,6 +9,7 @@ package cache
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -22,11 +23,17 @@ type RedisClient struct {
 }
 
 // NewRedisClient ..
-func NewRedisClient(addrs, prefix string, ttl time.Duration, username, password string) (*RedisClient, error) {
+func NewRedisClient(addrs, prefix string, ttl time.Duration, username, password, db string) (*RedisClient, error) {
+	var dbNum int
+	if db != "" {
+		dbNum, _ = strconv.Atoi(db)
+	}
+
 	client := redis.NewClient(&redis.Options{
 		Addr:     addrs,
 		Username: username,
 		Password: password,
+		DB:       dbNum,
 	})
 	_, err := client.Ping(context.Background()).Result()
 	if err != nil {

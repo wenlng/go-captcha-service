@@ -97,9 +97,9 @@ func (cl *ClickCaptLogic) GetData(ctx context.Context, id string) (res *adapt.Ca
 		return nil, fmt.Errorf("failed to json marshal: %v", err)
 	}
 
-	key, err := helper.GenUniqueId()
+	key, err := helper.GenerateIDWithNode(cl.dynamicCfg.Get().ServiceNode)
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate uuid: %v", err)
+		return nil, fmt.Errorf("failed to generate id: %v", err)
 	}
 
 	err = cl.cacheMgr.GetCache().SetCache(ctx, key, string(cacheDataByte))

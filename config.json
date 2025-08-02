@@ -1,6 +1,7 @@
 {
   "config_version": 1,
   "service_name": "go-captcha-service",
+  "service_node": 1,
   "http_port": "8080",
   "grpc_port": "50051",
 
@@ -8,6 +9,7 @@
   "cache_addrs": "",
   "cache_username": "",
   "cache_password": "",
+  "cache_db": "0",
   "cache_key_prefix": "GO_CAPTCHA_DATA:",
   "cache_ttl": 1800,
 
@@ -45,5 +47,5 @@
   "rate_limit_burst": 1000,
   "enable_cors": true,
   "log_level": "info",
-  "api_keys": ["my-secret-key-123", "another-key-456", "another-key-789"]
+  "api_keys": []
 }
