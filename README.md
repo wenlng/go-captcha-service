@@ -91,6 +91,65 @@
 <br/>
 <br/>
 
+#### Deploying with Supervisorctl
+`Supervisorctl` is a command-line tool provided by supervisord for managing background processes started by Supervisor.
+
+1. Deploy the service using Supervisorctl as a background process:
+
+```shell
+sudo vi /etc/supervisord.conf
+```
+
+Add the following configuration to the `supervisord.conf` file:
+```text
+;go-captcha-service
+[program:go-captcha-service]
+command=/app/go-captcha-service-[xxx]
+```
+
+```shell
+sudo supervisorctl update
+```
+
+2、Deploy the service using Systemd (Linux):
+
+```shell
+# 创建服务文件
+sudo vi /etc/systemd/system/go-captcha.service
+```
+
+Add the following configuration:
+```
+[Unit]
+Description=go-captcha-service
+After=network.target
+
+[Service]
+ExecStart=/app/go-captcha-service-[xxx]
+Restart=always
+User=nobody
+Group=nogroup
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Start and enable the service:
+
+```shell
+sudo systemctl enable go-captcha
+sudo systemctl start go-captcha
+```
+
+Check the service status:
+```shell
+sudo systemctl status go-captcha
+```
+
+<br/>
+<br/>
+
+
 #### PM2 Deployment
 PM2 is a Node.js process manager that can manage Go services, providing process monitoring and log management.
 
@@ -474,6 +533,7 @@ Note: Startup parameters correspond to fields in `config.json`. It is recommende
 * `config`: Specifies the configuration file path, default `config.json`.
 * `gocaptcha-config`: Specifies the GoCaptcha configuration file path, default `gocaptcha.json`.
 * `service-name`: Sets the service name.
+* `service-node`: Sets the service node number.
 * `http-port`: Sets the HTTP server port.
 * `grpc-port`: Sets the gRPC server port.
 * `redis-addrs`: Sets Redis cluster addresses, comma-separated.
@@ -528,6 +588,7 @@ Basic Configuration:
 * `CONFIG`: Main configuration file path for loading application settings.
 * `GO_CAPTCHA_CONFIG`: CAPTCHA service configuration file path.
 * `SERVICE_NAME`: Service name to identify the service instance.
+* `SERVICE_NODE`: Service node number to the service instance.
 * `HTTP_PORT`: HTTP service listening port.
 * `GRPC_PORT`: gRPC service listening port.
 * `API_KEYS`: API keys for authentication or authorization.
@@ -567,12 +628,14 @@ The service uses two configuration files: `config.json` for service runtime para
 {
    "config_version": 1,
    "service_name": "go-captcha-service",
+   "service_node": 1,
    "http_port": "8080",
    "grpc_port": "50051",
    "redis_addrs": "localhost:6379",
    "etcd_addrs": "localhost:2379",
    "memcache_addrs": "localhost:11211",
    "cache_type": "memory",
+   "cache_db": "0",
    "cache_ttl": 1800,
    "cache_key_prefix": "GO_CAPTCHA_DATA:",
   
@@ -628,6 +691,7 @@ The service uses two configuration files: `config.json` for service runtime para
     - `redis`: Distributed key-value store, suitable for high-availability scenarios.
     - `etcd`: Distributed key-value store, suitable for sharing with service discovery.
     - `memcache`: High-performance distributed cache, suitable for high concurrency.
+- `cache_db` (string): Cache service db name, default `0`.
 - `cache_ttl` (integer): Cache expiration time in seconds, default `1800`.
 - `cache_key_prefix` (string): Cache key prefix, default `GO_CAPTCHA_DATA:`.
 
@@ -1054,6 +1118,7 @@ Hot-reloadable fields in `config.json` include:
 * `cache_addrs`
 * `cache_username`
 * `cache_password`
+* `cache_db`
 * `cache_ttl`
 * `cache_key_prefix`
 * `api_keys`

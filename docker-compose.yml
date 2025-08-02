@@ -50,3 +50,4 @@ services:
       - nacos
     volumes:
       - ./config.json:/app/config.json
+      - ./gocaptcha.json:/app/gocaptcha.json

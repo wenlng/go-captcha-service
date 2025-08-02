@@ -71,6 +71,10 @@
 - 可选：Node.js 和 PM2（用于 PM2 部署）
 - 可选：gRPC 客户端工具（如 `grpcurl`）
 
+<br/>
+<hr />
+<br/>
+
 ### 单机部署
 
 #### 二进制方式
@@ -93,7 +97,71 @@
 <br/>
 <br/>
 
-#### PM2 部署（二进制方式推荐）
+<hr />
+<br/>
+
+#### 使用 Supervisorctl 部署
+Supervisorctl 是 Supervisord 提供的命令行控制工具，用于管理用 Supervisor 启动的后台进程。
+
+1. 使用 supervisorctl 部署为后台服务：
+
+```shell
+sudo vi /etc/supervisord.conf
+```
+
+在 supervisord.conf 配置文件写入：
+```text
+;go-captcha-service
+[program:go-captcha-service]
+command=/app/go-captcha-service-[xxx]
+```
+
+```shell
+sudo supervisorctl update
+```
+
+2、使用 Systemd 部署为后台服务(linux)：
+
+```shell
+# 创建服务文件
+sudo vi /etc/systemd/system/go-captcha.service
+```
+
+添加配置：
+```
+[Unit]
+Description=验证码服务
+After=network.target
+
+[Service]
+ExecStart=/app/go-captcha-service-[xxx]
+Restart=always
+User=nobody
+Group=nogroup
+
+[Install]
+WantedBy=multi-user.target
+```
+
+启动服务：
+
+```shell
+sudo systemctl enable go-captcha
+sudo systemctl start go-captcha
+```
+
+检查状态：
+```shell
+sudo systemctl status go-captcha
+```
+
+<br/>
+<br/>
+
+<hr />
+<br/>
+
+#### PM2 部署
 PM2 是 Node.js 进程守护管理工具，可用于管理 Go 服务，提供进程守护和日志管理。
 1. 安装 Node.js 和 PM2：
 
@@ -151,6 +219,9 @@ PM2 是 Node.js 进程守护管理工具，可用于管理 Go 服务，提供进
    ```
 
 <br/>
+<br/>
+
+<hr />
 <br/>
 
 #### 使用源码 + Docker 部署
@@ -481,12 +552,14 @@ server {
 * config：指定配置文件路径，默认 "config.json"。
 * gocaptcha-config：指定 GoCaptcha 配置文件路径，默认 "gocaptcha.json"。
 * service-name：设置服务名称。
+* service-node：设置服务节点编号（多节点可配置雪花ID节点）。
 * http-port：设置 HTTP 服务器端口。
 * grpc-port：设置 gRPC 服务器端口。
 * redis-addrs：设置 Redis 集群地址，逗号分隔。
 * etcd-addrs：设置 etcd 地址，逗号分隔。
 * memcache-addrs：设置 Memcached 地址，逗号分隔。
 * cache-type：设置缓存类型，支持 redis、memory、etcd、memcache。
+* cache-db：设置缓存DB名称，默认"0"。
 * cache-ttl：设置缓存 TTL，单位秒。
 * cache-key-prefix：设置缓存键前缀，默认 "GO_CAPTCHA_DATA:"。
 
@@ -536,6 +609,7 @@ server {
 * CONFIG: 主配置文件路径，用于加载应用程序配置。
 * GO_CAPTCHA_CONFIG: CAPTCHA 服务的配置文件路径。
 * SERVICE_NAME: 服务名称，用于标识服务实例。
+* SERVICE_NODE: 服务节点编号。
 * HTTP_PORT: HTTP 服务监听端口。
 * GRPC_PORT: gRPC 服务监听端口。
 * API_KEYS: API 密钥，用于认证或授权。
@@ -548,6 +622,7 @@ server {
 * CACHE_ADDRS: 缓存服务地址列表。
 * CACHE_USERNAME: 缓存服务认证用户名。
 * CACHE_PASSWORD: 缓存服务认证密码。
+* CACHE_DB: 缓存服务DB(redis)。
 
 动态配置服务：
 * ENABLE_DYNAMIC_CONFIG: 是否启用动态配置（值为 true 表示启用）。
@@ -576,12 +651,14 @@ server {
 {
    "config_version": 1,
    "service_name": "go-captcha-service",
+   "service_node": 1,
    "http_port": "8080",
    "grpc_port": "50051",
    "redis_addrs": "localhost:6379",
    "etcd_addrs": "localhost:2379",
    "memcache_addrs": "localhost:11211",
    "cache_type": "memory",
+   "cache_db": "0",
    "cache_ttl": 1800,
    "cache_key_prefix": "GO_CAPTCHA_DATA:",
   
@@ -637,6 +714,7 @@ server {
    - `redis`：分布式键值存储，适合高可用场景。
    - `etcd`：分布式键值存储，适合与服务发现共用 Etcd。
    - `memcache`：高性能分布式缓存，适合高并发。
+- `cache_db` (字符串)：缓存服务DB名称，默认 `0`.
 - `cache_ttl` (整数)：缓存有效期（秒），默认 `1800`.
 - `cache_key_prefix` (字符串)：缓存键前缀，默认 `GO_CAPTCHA_DATA:`。
 

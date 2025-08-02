@@ -19,9 +19,30 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/bwmarrin/snowflake"
 	"github.com/google/uuid"
 	"github.com/wenlng/go-captcha/v2/base/codec"
 )
+
+var idNode, _ = snowflake.NewNode(1)
+
+// GenerateID ..
+func GenerateID() string {
+	return idNode.Generate().String()
+}
+
+// GenerateIDWithNode ..
+func GenerateIDWithNode(node int64) (string, error) {
+	if node <= 0 {
+		node = 1
+	}
+
+	n, err := snowflake.NewNode(node)
+	if err != nil {
+		return "", err
+	}
+	return n.Generate().String(), nil
+}
 
 // GenUniqueId .
 func GenUniqueId() (string, error) {

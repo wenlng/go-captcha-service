@@ -111,7 +111,7 @@
             "y": -1
           },
           "image_alpha": 1,
-          "use_shape_original_color": true
+          "use_shape_original_color": false
         },
         "thumb": {
           "image_size": {
@@ -206,7 +206,7 @@
             "y": -1
           },
           "image_alpha": 1,
-          "use_shape_original_color": true
+          "use_shape_original_color": false
         },
         "thumb": {
           "image_size": {
@@ -301,7 +301,7 @@
             "y": -1
           },
           "image_alpha": 1,
-          "use_shape_original_color": true
+          "use_shape_original_color": false
         },
         "thumb": {
           "image_size": {
@@ -396,7 +396,7 @@
             "y": -1
           },
           "image_alpha": 1,
-          "use_shape_original_color": true
+          "use_shape_original_color": false
         },
         "thumb": {
           "image_size": {
@@ -457,7 +457,7 @@
           "shadow_color": "#101010",
           "shadow_point": { "x": -1, "y": -1 },
           "image_alpha": 1,
-          "use_shape_original_color": true
+          "use_shape_original_color": false
         },
         "thumb": {
           "image_size": { "width": 150, "height": 40},

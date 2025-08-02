@@ -334,6 +334,7 @@ func setupCacheManager(dcfg *config.DynamicConfig, logger *zap.Logger) (*cache.C
 		CacheUsername: cfg.CacheUsername,
 		CachePassword: cfg.CachePassword,
 		KeyPrefix:     cfg.CacheKeyPrefix,
+		CacheDB:       cfg.CacheDB,
 		Ttl:           ttl,
 		CleanInt:      cleanInt,
 	})

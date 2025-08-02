@@ -1,13 +1,14 @@
 {
   "config_version": 5,
   "service_name": "go-captcha-service",
-  "http_port": "8181",
+  "http_port": "8081",
   "grpc_port": "50058",
 
   "cache_type": "memory",
   "cache_ttl": 1800,
   "cache_key_prefix": "GO_CAPTCHA_DATA:",
   "cache_addrs": "localhost:6379",
+  "cache_db": "1",
   "cache_username": "",
   "cache_password": "",
 
