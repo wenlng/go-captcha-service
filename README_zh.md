@@ -275,7 +275,7 @@ PM2 是 Node.js 进程守护管理工具，可用于管理 Go 服务，提供进
      -v $(pwd)/config.json:/app/config.json \
      -v $(pwd)/gocaptcha.json:/app/gocaptcha.json \
      -v $(pwd)/resource/gocaptcha:/app/resource/gocaptcha \
-     --name go-captcha-service go-captcha-service:latest
+     --name go-captcha-service go-captcha-service:${VERSION_NUM}
    ```
 
 <br/>
@@ -287,14 +287,14 @@ PM2 是 Node.js 进程守护管理工具，可用于管理 Go 服务，提供进
 1. 拉取官方镜像：
 
    ```bash
-   docker pull wenlng/go-captcha-service@latest
+   docker pull wenlng/go-captcha-service@${VERSION_NUM}  # example: wenlng/go-captcha-service@v1.0.5
    ```
 
 2. 运行容器：
 
    ```bash
    docker run -d -p 8080:8080 -p 50051:50051 \
-     --name go-captcha-service wenlng/go-captcha-service:latest
+     --name go-captcha-service wenlng/go-captcha-service:${VERSION_NUM}
    ```
 
 <br/>
@@ -387,7 +387,7 @@ PM2 是 Node.js 进程守护管理工具，可用于管理 Go 服务，提供进
 version: '3'
 services:
   captcha-service-1:
-    image: wenlng/go-captcha-service:latest
+    image: wenlng/go-captcha-service:${VERSION_NUM}  # example: wenlng/go-captcha-service:v1.0.5
     ports:
       - "8080:8080"
       - "50051:50051"
@@ -413,7 +413,7 @@ services:
     restart: unless-stopped
 
   captcha-service-2:
-    image: wenlng/go-captcha-service:latest
+    image: wenlng/go-captcha-service:${VERSION_NUM}
     ports:
       - "8081:8080"
       - "50052:50051"
@@ -466,7 +466,7 @@ docker-compose up -d
 ## 预置 API
 * 获取验证码
     ```shell
-    curl http://127.0.0.1:8080/api/v1/public/get-data\?id\=click-default-ch
+    curl http://127.0.0.1:8080/api/v1/public/get-data?id=click-default-ch
     ```
 
 * 验证码校验  data == "ok" 代表成功
@@ -476,12 +476,12 @@ docker-compose up -d
 
 * 获取校验结果  data == "ok" 代表成功
   ```shell
-  curl http://127.0.0.1:8080/api/v1/public/check-status\?captchaKey\=xxxx-xxxx
+  curl http://127.0.0.1:8080/api/v1/public/check-status?captchaKey=xxxx-xxxx
   ```
 
 * 获取状态信息
   ```shell
-  curl -H "X-API-Key:my-secret-key-123" http://127.0.0.1:8080/api/v1/manage/get-status-info\?captchaKey\=xxxx-xxxx
+  curl -H "X-API-Key:my-secret-key-123" http://127.0.0.1:8080/api/v1/manage/get-status-info?captchaKey=xxxx-xxxx
   ```
 
 * 上传资源
@@ -610,8 +610,10 @@ server {
 * GO_CAPTCHA_CONFIG: CAPTCHA 服务的配置文件路径。
 * SERVICE_NAME: 服务名称，用于标识服务实例。
 * SERVICE_NODE: 服务节点编号。
-* HTTP_PORT: HTTP 服务监听端口。
-* GRPC_PORT: gRPC 服务监听端口。
+* HTTP_HOST: HTTP 服务监听HOST。
+* HTTP_PORT: HTTP 服务监听PORT。
+* GRPC_HOST: gRPC 服务监听HOST。
+* GRPC_PORT: gRPC 服务监听PORT。
 * API_KEYS: API 密钥，用于认证或授权。
 * AUTH_APIS: 鉴权 API，用于认证或授权。
 * LOG_LEVEL: 设置 Log 级别.

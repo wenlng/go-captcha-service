@@ -2,7 +2,9 @@
   "config_version": 1,
   "service_name": "go-captcha-service",
   "service_node": 1,
+  "http_host": "0.0.0.0",
   "http_port": "8080",
+  "grpc_host": "0.0.0.0",
   "grpc_port": "50051",
 
   "cache_type": "memory",
@@ -47,5 +49,16 @@
   "rate_limit_burst": 1000,
   "enable_cors": true,
   "log_level": "info",
-  "api_keys": []
+  "api_keys": [],
+  "auth_apis": [
+    "/api/v1/manage/get-status-info",
+    "/api/v1/manage/del-status-info",
+    "/api/v1/manage/upload-resource",
+    "/api/v1/manage/delete-resource",
+    "/api/v1/manage/get-resource-list",
+    "/api/v1/manage/get-config",
+    "/api/v1/manage/update-hot-config",
+    "/gocaptcha.GoCaptchaService/GetStatusInfo",
+    "/gocaptcha.GoCaptchaService/DelStatusInfo"
+  ]
 }

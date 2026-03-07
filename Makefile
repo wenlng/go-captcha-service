@@ -138,6 +138,7 @@ docker-build-multi:
 docker-proxy-build-multi:
 	export http_proxy=http://127.0.0.1:7890
 	export https_proxy=http://127.0.0.1:7890
+	docker buildx use mybuilder
 	docker buildx build \
 		--platform linux/amd64,linux/arm64,linux/arm/v7,windows/amd64 \
 		-t $(DOCKER_IMAGE):$(VERSION) \

@@ -31,6 +31,7 @@ import (
 	"github.com/wenlng/go-service-link/servicediscovery"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/keepalive"
 )
 
 // App manages the application components
@@ -56,7 +57,9 @@ func NewApp() (*App, error) {
 	gocaptchaConfigFile := flag.String("gocaptcha-config", "gocaptcha.json", "Path to gocaptcha config file")
 	serviceName := flag.String("service-name", "", "Name for service")
 	serviceNode := flag.Int64("service-node", 1, "Node number for service")
+	httpHost := flag.String("http-host", "", "Host for HTTP server")
 	httpPort := flag.String("http-port", "", "Port for HTTP server")
+	grpcHost := flag.String("grpc-host", "", "Host for gRPC server")
 	grpcPort := flag.String("grpc-port", "", "Port for gRPC server")
 
 	cacheType := flag.String("cache-type", "", "CacheManager type: redis, memory, etcd, memcache")
@@ -122,8 +125,14 @@ func NewApp() (*App, error) {
 		n, _ := strconv.ParseInt(v, 10, 64)
 		*serviceNode = n
 	}
+	if v, exists := os.LookupEnv("HTTP_HOST"); exists {
+		*httpHost = v
+	}
 	if v, exists := os.LookupEnv("HTTP_PORT"); exists {
 		*httpPort = v
+	}
+	if v, exists := os.LookupEnv("GRPC_HOST"); exists {
+		*grpcHost = v
 	}
 	if v, exists := os.LookupEnv("GRPC_PORT"); exists {
 		*grpcPort = v
@@ -227,7 +236,9 @@ func NewApp() (*App, error) {
 	cfg = config.MergeWithFlags(cfg, map[string]interface{}{
 		"service-name": *serviceName,
 		"service-node": *serviceNode,
+		"http-host":    *httpHost,
 		"http-port":    *httpPort,
+		"grpc-host":    *grpcHost,
 		"grpc-port":    *grpcPort,
 
 		"cache-type":       *cacheType,
@@ -284,14 +295,22 @@ func NewApp() (*App, error) {
 		limiter.Update(dnCfg.Get().RateLimitQPS, dnCfg.Get().RateLimitBurst)
 	})
 
-	// Initialize circuit breaker
+	// Initialize circuit breaker with optimized settings for large-scale clusters
 	cacheBreaker := gobreaker.NewCircuitBreaker(gobreaker.Settings{
 		Name:        *serviceName,
-		MaxRequests: 1,
+		MaxRequests: 100,
 		Interval:    60 * time.Second,
-		Timeout:     5 * time.Second,
+		Timeout:     10 * time.Second,
 		ReadyToTrip: func(counts gobreaker.Counts) bool {
-			return counts.ConsecutiveFailures > 3
+			return counts.ConsecutiveFailures > 5 ||
+				(counts.TotalFailures > 10 && float64(counts.TotalFailures)/float64(counts.Requests) > 0.5)
+		},
+		OnStateChange: func(name string, from gobreaker.State, to gobreaker.State) {
+			logger.Info("[App] Circuit breaker state changed",
+				zap.String("name", name),
+				zap.String("from", from.String()),
+				zap.String("to", to.String()),
+			)
 		},
 	})
 
@@ -327,7 +346,17 @@ func NewApp() (*App, error) {
 
 	// Perform health check if requested
 	if *healthCheckFlag == "true" {
-		if err = setupHealthCheck(":"+cfg.HTTPPort, ":"+cfg.GRPCPort); err != nil {
+		httpAddr := net.JoinHostPort(cfg.HTTPHost, cfg.HTTPPort)
+		if cfg.HTTPHost == "" {
+			httpAddr = "localhost:" + cfg.HTTPPort
+		}
+
+		grpcAddr := net.JoinHostPort(cfg.GRPCHost, cfg.GRPCPort)
+		if cfg.GRPCHost == "" {
+			grpcAddr = "localhost:" + cfg.GRPCPort
+		}
+
+		if err = setupHealthCheck(httpAddr, grpcAddr); err != nil {
 			logger.Error("[App] Filed to health check", zap.Error(err))
 			os.Exit(1)
 		}
@@ -386,7 +415,11 @@ func (a *App) startDiscoveryRegister(ctx context.Context, cfg *config.Config) er
 	var instanceID string
 	if a.discovery != nil {
 		instanceID = uuid.New().String()
-		if err := a.discovery.Register(ctx, cfg.ServiceName, instanceID, "localhost", cfg.HTTPPort, cfg.GRPCPort); err != nil {
+		host := cfg.HTTPHost
+		if host == "" {
+			host = "localhost"
+		}
+		if err := a.discovery.Register(ctx, cfg.ServiceName, instanceID, host, cfg.HTTPPort, cfg.GRPCPort); err != nil {
 			return fmt.Errorf("failed to register service: %v", err)
 		}
 		go a.watchServiceDiscoveryInstances(ctx, instanceID)
@@ -429,12 +462,21 @@ func (a *App) startHTTPServer(svcCtx *common.SvcContext, cfg *config.Config) err
 	http.Handle("/api/v1/manage/get-config", mwChain.Then(handlers.GetGoCaptchaConfigHandler))
 	http.Handle("/api/v1/manage/update-hot-config", mwChain.Then(handlers.UpdateHotGoCaptchaConfigHandler))
 
+	addr := net.JoinHostPort(cfg.HTTPHost, cfg.HTTPPort)
+	if cfg.HTTPHost == "" {
+		addr = ":" + cfg.HTTPPort
+	}
+
 	a.httpServer = &http.Server{
-		Addr: ":" + cfg.HTTPPort,
+		Addr:           addr,
+		ReadTimeout:    10 * time.Second,
+		WriteTimeout:   10 * time.Second,
+		IdleTimeout:    120 * time.Second,
+		MaxHeaderBytes: 1 << 20,
 	}
 
 	go func() {
-		a.logger.Info("[App] Starting HTTP server", zap.String("port", cfg.HTTPPort))
+		a.logger.Info("[App] Starting HTTP server", zap.String("addr", addr))
 		if err := a.httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			a.logger.Fatal("[App] HTTP server failed", zap.Error(err))
 		}
@@ -445,17 +487,35 @@ func (a *App) startHTTPServer(svcCtx *common.SvcContext, cfg *config.Config) err
 
 // startGRPCServer start gRPC server
 func (a *App) startGRPCServer(svcCtx *common.SvcContext, cfg *config.Config) error {
-	lis, err := net.Listen("tcp", ":"+cfg.GRPCPort)
+	addr := net.JoinHostPort(cfg.GRPCHost, cfg.GRPCPort)
+	if cfg.GRPCHost == "" {
+		addr = ":" + cfg.GRPCPort
+	}
+
+	lis, err := net.Listen("tcp", addr)
 	if err != nil {
 		return fmt.Errorf("failed to listen: %v", err)
 	}
 
 	interceptor := middleware.UnaryServerInterceptor(a.dynamicCfg, a.logger, a.cacheBreaker)
-	a.grpcServer = grpc.NewServer(grpc.UnaryInterceptor(interceptor))
+	a.grpcServer = grpc.NewServer(
+		grpc.UnaryInterceptor(interceptor),
+		grpc.MaxRecvMsgSize(4*1024*1024),
+		grpc.MaxSendMsgSize(4*1024*1024),
+		grpc.MaxConcurrentStreams(1000),
+		grpc.KeepaliveParams(keepalive.ServerParameters{
+			Time:    10 * time.Second,
+			Timeout: 3 * time.Second,
+		}),
+		grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
+			MinTime:             5 * time.Second,
+			PermitWithoutStream: true,
+		}),
+	)
 	proto.RegisterGoCaptchaServiceServer(a.grpcServer, server.NewGoCaptchaServer(svcCtx))
 
 	go func() {
-		a.logger.Info("[App] Starting gRPC server", zap.String("port", cfg.GRPCPort))
+		a.logger.Info("[App] Starting gRPC server", zap.String("addr", addr))
 		if err := a.grpcServer.Serve(lis); err != nil && err != grpc.ErrServerStopped {
 			a.logger.Fatal("[App] gRPC server failed", zap.Error(err))
 		}

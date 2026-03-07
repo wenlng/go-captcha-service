@@ -133,19 +133,46 @@ func (cm *CacheManager) Setup(arg *CacheMgrParams) error {
 		return fmt.Errorf("invalid cache type: %v", arg.Type)
 	}
 
+	cm.mu.Lock()
+	oldCache := cm.cache
+
 	cm.cType = arg.Type
 	cm.cAddress = curAddrs
 	cm.cKeyPrefix = arg.KeyPrefix
 	cm.cTtl = arg.Ttl
 	cm.cCleanInt = arg.CleanInt
 	cm.cUsername = arg.CacheUsername
-	cm.cPassword = arg.CacheAddrs
-
-	cm.mu.Lock()
+	cm.cPassword = arg.CachePassword
 	cm.cache = curCache
 	cm.mu.Unlock()
 
+	if oldCache != nil {
+		if err := cm.closeCache(oldCache); err != nil {
+		}
+	}
+
 	return nil
+}
+
+// closeCache .
+func (cm *CacheManager) closeCache(cache Cache) error {
+	if cache == nil {
+		return nil
+	}
+
+	switch c := cache.(type) {
+	case *RedisClient:
+		return c.Close()
+	case *MemoryCache:
+		c.Stop()
+		return nil
+	case *EtcdClient:
+		return c.Close()
+	case *MemcacheClient:
+		return c.Close()
+	default:
+		return nil
+	}
 }
 
 // Close ..

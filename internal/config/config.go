@@ -28,7 +28,9 @@ type Config struct {
 
 	ConfigVersion  int64    `json:"config_version"`
 	ServiceName    string   `json:"service_name"`
+	HTTPHost       string   `json:"http_host"`
 	HTTPPort       string   `json:"http_port"`
+	GRPCHost       string   `json:"grpc_host"`
 	GRPCPort       string   `json:"grpc_port"`
 	CacheAddrs     string   `json:"cache_addrs"`
 	CacheUsername  string   `json:"cache_username"`
@@ -404,6 +406,9 @@ func isValidAddrs(addrs string) bool {
 
 // MergeWithFlags merges command-line flags into the configuration
 func MergeWithFlags(config Config, flags map[string]interface{}) Config {
+	if v, ok := flags["http-host"].(string); ok && v != "" {
+		config.HTTPHost = v
+	}
 	if v, ok := flags["http-port"].(string); ok && v != "" {
 		config.HTTPPort = v
 	}
@@ -412,6 +417,9 @@ func MergeWithFlags(config Config, flags map[string]interface{}) Config {
 	}
 	if v, ok := flags["service-node"].(int64); ok && v > 0 {
 		config.ServiceNode = v
+	}
+	if v, ok := flags["grpc-host"].(string); ok && v != "" {
+		config.GRPCHost = v
 	}
 	if v, ok := flags["grpc-port"].(string); ok && v != "" {
 		config.GRPCPort = v
@@ -553,7 +561,9 @@ func DefaultConfig() Config {
 	return Config{
 		ServiceName:            "go-captcha-service",
 		ServiceNode:            1,
+		HTTPHost:               "0.0.0.0",
 		HTTPPort:               "8080",
+		GRPCHost:               "0.0.0.0",
 		GRPCPort:               "50051",
 		CacheType:              "memory",
 		CacheAddrs:             "",

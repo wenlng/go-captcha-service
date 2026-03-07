@@ -2,7 +2,9 @@
   "config_version": 1,
   "service_name": "go-captcha-service",
   "service_node": 1,
+  "http_host": "0.0.0.0",
   "http_port": "8080",
+  "grpc_host": "0.0.0.0",
   "grpc_port": "50051",
 
   "cache_type": "memory",
@@ -55,6 +57,8 @@
     "/api/v1/manage/delete-resource",
     "/api/v1/manage/get-resource-list",
     "/api/v1/manage/get-config",
-    "/api/v1/manage/update-hot-config"
+    "/api/v1/manage/update-hot-config",
+    "/gocaptcha.GoCaptchaService/GetStatusInfo",
+    "/gocaptcha.GoCaptchaService/DelStatusInfo"
   ]
 }

@@ -223,8 +223,7 @@ func (d *DynamicLimiter) Update(qps, burst int) {
 	}
 	d.mu.Lock()
 	defer d.mu.Unlock()
-	d.limiter.SetLimit(rate.Limit(qps))
-	d.limiter.SetBurst(burst)
+	d.limiter = rate.NewLimiter(rate.Limit(qps), burst)
 }
 
 // RateLimitHandler handles dynamic rate limit updates

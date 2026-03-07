@@ -20,6 +20,7 @@ type MemoryCache struct {
 	prefix   string
 	stop     chan struct{}
 	cleanInt time.Duration
+	stopOnce sync.Once
 }
 
 type cacheItem struct {
@@ -101,5 +102,7 @@ func (c *MemoryCache) Close() error {
 
 // Stop ..
 func (c *MemoryCache) Stop() {
-	close(c.stop)
+	c.stopOnce.Do(func() {
+		close(c.stop)
+	})
 }

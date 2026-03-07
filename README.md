@@ -256,7 +256,7 @@ PM2 is a Node.js process manager that can manage Go services, providing process 
      -v $(pwd)/config.json:/app/config.json \
      -v $(pwd_MAIN)/gocaptcha.json:/app/gocaptcha.json \
      -v $(pwd)/resource/gocaptcha:/app/resource/gocaptcha \
-     --name go-captcha-service go-captcha-service:latest
+     --name go-captcha-service go-captcha-service:${VERSION_NUM}
    ```
 
 <br/>
@@ -267,7 +267,7 @@ PM2 is a Node.js process manager that can manage Go services, providing process 
 1. Pull the official image:
 
    ```bash
-   docker pull wenlng/go-captcha-service@latest
+   docker pull wenlng/go-captcha-service@${VERSION_NUM}
    ```
 
 2. Run the container:
@@ -277,7 +277,7 @@ PM2 is a Node.js process manager that can manage Go services, providing process 
      -v $(pwd)/config.json:/app/config.json \
      -v $(pwd)/gocaptcha.json:/app/gocaptcha.json \
      -v $(pwd)/resource/gocaptcha:/app/resource/gocaptcha \
-     --name go-captcha-service wenlng/go-captcha-service:latest
+     --name go-captcha-service wenlng/go-captcha-service:${VERSION_NUM}
    ```
 
 <br/>
@@ -366,7 +366,7 @@ Create a `docker-compose.yml` file including multiple service instances, Consul,
 version: '3'
 services:
   captcha-service-1:
-    image: wenlng/go-captcha-service:latest
+    image: wenlng/go-captcha-service:${VERSION_NUM}  # example: wenlng/go-captcha-service:v1.0.5
     ports:
       - "8080:8080"
       - "50051:50051"
@@ -392,7 +392,7 @@ services:
     restart: unless-stopped
 
   captcha-service-2:
-    image: wenlng/go-captcha-service:latest
+    image: wenlng/go-captcha-service:${VERSION_NUM}
     ports:
       - "8081:8080"
       - "50052:50051"
@@ -446,7 +446,7 @@ docker-compose up -d
 
 * Get CAPTCHA
     ```shell
-    curl http://127.0.0.1:8080/api/v1/public/get-data\?id\=click-default-ch
+    curl http://127.0.0.1:8080/api/v1/public/get-data?id=click-default-ch
     ```
 
 * Verify CAPTCHA
@@ -456,12 +456,12 @@ docker-compose up -d
 
 * Check Verification Status (`data == "ok"` indicates success)
   ```shell
-  curl http://127.0.0.1:8080/api/v1/public/check-status\?captchaKey\=xxxx-xxxx
+  curl http://127.0.0.1:8080/api/v1/public/check-status?captchaKey=xxxx-xxxx
   ```
 
 * Get Status Info
   ```shell
-  curl -H "X-API-Key:my-secret-key-123" http://127.0.0.1:8080/api/v1/manage/get-status-info\?captchaKey\=xxxx-xxxx
+  curl -H "X-API-Key:my-secret-key-123" http://127.0.0.1:8080/api/v1/manage/get-status-info?captchaKey=xxxx-xxxx
   ```
 
 * Upload Resources
